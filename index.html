@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM Autoformulation · From natural language to optimization models</title>
+<meta name="description" content="An introduction to LLM-based autoformulation, built on the survey by Guo et al. (2026): the four-stage pipeline, 31 benchmarks, a two-level metric taxonomy and eight open research directions.">
+<meta name="author" content="Tong Guo">
+<meta property="og:title" content="LLM Autoformulation: from natural language to optimization models">
+<meta property="og:description" content="The four-stage pipeline, 31 benchmarks, evaluation metrics and open problems of LLM-based autoformulation, from the survey by Guo et al. (SSRN 7204798).">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#09130f">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2309130f'/%3E%3Cpath d='M5 26 L16 5 L27 26 Z' fill='none' stroke='%2362d2a2' stroke-width='2'/%3E%3Ccircle cx='16' cy='5' r='2.6' fill='%2362d2a2'/%3E%3Ccircle cx='10.5' cy='15.5' r='2.2' fill='%23f0b44c'/%3E%3Ccircle cx='16' cy='26' r='2.6' fill='%2362d2a2'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
+<script>try{var t=localStorage.getItem("af.theme");if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+/* ===================================================================== tokens
+   Accents carry meaning: mint = feasible / correct, amber = verbal gradient, coral = infeasible. */
+:root{
+  --ink:#09130f;--surface:#0e1b15;--surface-2:#132820;--line:#1f3a2e;--line-soft:#172d23;
+  --chalk:#e3ece6;--muted:#8ea89a;--faint:#5b7568;
+  --ok:#62d2a2;--ok-soft:rgba(98,210,162,.13);--grad:#f0b44c;--grad-soft:rgba(240,180,76,.13);--bad:#ee7b68;--bad-soft:rgba(238,123,104,.13);
+  --lp:#7cc7f2;--ip:#c4a7f5;
+  --serif:"Newsreader","Iowan Old Style","Palatino Linotype",Georgia,"Songti SC","SimSun",serif;
+  --sans:"IBM Plex Sans",-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --nav:60px;--measure:66ch;color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --ink:#f2f5f3;--surface:#fff;--surface-2:#e8eeea;--line:#cad8cf;--line-soft:#dde6e0;
+  --chalk:#10201a;--muted:#4c6458;--faint:#7d9488;
+  --ok:#128a5b;--ok-soft:rgba(18,138,91,.1);--grad:#a86a00;--grad-soft:rgba(168,106,0,.1);--bad:#c2412c;--bad-soft:rgba(194,65,44,.1);
+  --lp:#1f78b4;--ip:#7b52c7;color-scheme:light;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--nav) + 12px);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ink);color:var(--chalk);font:400 1rem/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration-color:var(--faint);text-underline-offset:3px}
+a:hover{text-decoration-color:var(--ok)}
+:focus-visible{outline:2px solid var(--ok);outline-offset:2px;border-radius:3px}
+button{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--serif);font-weight:500;line-height:1.15;margin:0 0 .5em;letter-spacing:-.01em}
+h2{font-size:clamp(1.9rem,3.6vw,2.6rem)}
+h3{font-size:1.4rem}
+p{margin:0 0 1em}
+.muted{color:var(--muted)}.small{font-size:.9rem}.xs{font-size:.8rem}
+.wrap{max-width:1180px;margin:0 auto;padding:0 clamp(1rem,3vw,2.5rem)}
+.skip{position:absolute;left:-999px;top:8px;background:var(--ok);color:var(--ink);padding:8px 12px;z-index:100}.skip:focus{left:8px}
+.math{font-family:var(--serif);font-style:italic}
+.math sub,.math sup{font-size:.72em}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:50;height:var(--nav);display:flex;align-items:center;gap:1.5rem;padding:0 clamp(1rem,3vw,2.5rem);
+  background:color-mix(in srgb,var(--ink) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line-soft)}
+.brand{display:flex;align-items:center;gap:.55rem;text-decoration:none;font-family:var(--serif);font-size:1.15rem;white-space:nowrap}
+.links{display:flex;gap:.1rem;flex:1;overflow-x:auto;scrollbar-width:none}
+.links a{text-decoration:none;padding:.35rem .65rem;border-radius:4px;color:var(--muted);font-size:.9rem;white-space:nowrap}
+.links a:hover,.links a.on{color:var(--chalk);background:var(--surface-2)}
+.tools{display:flex;gap:.4rem}
+.ib{background:none;border:1px solid var(--line);border-radius:4px;height:32px;min-width:32px;padding:0 .55rem;cursor:pointer;color:var(--muted);font-size:.85rem;display:inline-flex;align-items:center;justify-content:center}
+.ib:hover{color:var(--chalk);border-color:var(--faint)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.15rem;border-radius:4px;border:1px solid var(--line);background:var(--surface);cursor:pointer;text-decoration:none;font-weight:500;font-size:.95rem;line-height:1.2}
+.btn:hover{border-color:var(--faint)}
+.btn.primary{background:var(--ok);color:var(--ink);border-color:var(--ok)}
+.btn.primary:hover{filter:brightness(1.08)}
+.row{display:flex;gap:.6rem;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:.35rem;padding:.25rem .65rem;border-radius:999px;border:1px solid var(--line);font-size:.8rem;color:var(--muted);background:none;cursor:pointer;white-space:nowrap}
+.chip[aria-pressed="true"]{border-color:var(--ok);color:var(--chalk);background:var(--ok-soft)}
+
+/* hero */
+.hero{position:relative;min-height:calc(100vh - var(--nav));display:grid;grid-template-columns:minmax(320px,5fr) 7fr;border-bottom:1px solid var(--line-soft);overflow:hidden}
+.hero-copy{position:relative;z-index:2;padding:clamp(2rem,7vh,5rem) 0 3rem clamp(1rem,5vw,4.5rem);display:flex;flex-direction:column;justify-content:center}
+.paper-tag{display:inline-flex;gap:.6rem;align-items:center;align-self:flex-start;border:1px solid color-mix(in srgb,var(--ok) 45%,transparent);background:var(--ok-soft);border-radius:999px;padding:.3rem .9rem .3rem .4rem;font-size:.85rem;text-decoration:none;margin-bottom:2rem}
+.paper-tag b{background:var(--ok);color:var(--ink);border-radius:999px;padding:.05rem .55rem;font-weight:600;font-size:.75rem}
+.hero h1{font-size:clamp(2.5rem,5.4vw,4.8rem);line-height:1.03;margin-bottom:1.3rem;text-wrap:balance}
+.lede{font-family:var(--serif);font-size:clamp(1.15rem,1.6vw,1.35rem);line-height:1.45;color:var(--muted);max-width:50ch;margin-bottom:2rem}
+.hero-canvas{position:relative;min-height:520px}
+.hero-canvas canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.legend{position:absolute;right:1.25rem;bottom:1.25rem;display:flex;gap:1rem;align-items:center;flex-wrap:wrap;font-size:.78rem;color:var(--muted);z-index:3;background:color-mix(in srgb,var(--ink) 82%,transparent);padding:.4rem .7rem;border-radius:4px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:.35rem;vertical-align:-1px}
+.tip{position:absolute;z-index:4;max-width:340px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:.7rem .9rem;font-size:.88rem;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+
+/* sections */
+section.block{padding:5.5rem 0;border-top:1px solid var(--line-soft)}
+.hero+section.block{border-top:0}
+.sec-head{max-width:var(--measure);margin-bottom:2.5rem}
+.sec-head p{color:var(--muted);font-size:1.08rem}
+.two>*,.survey>*,.para>*,.io>*{min-width:0}
+.two{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(1.5rem,4vw,4rem);align-items:start}
+.prose{font-family:var(--serif);font-size:1.14rem;line-height:1.65;max-width:var(--measure)}
+.prose p{margin-bottom:1.05em}
+.k-ok{color:var(--ok)}.k-grad{color:var(--grad)}
+.figure{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:1.5rem}
+.cap{font-size:.88rem;color:var(--muted);margin-top:.8rem}
+
+/* act: words to model */
+.nl{font-family:var(--serif);font-size:1.12rem;line-height:1.8}
+.nl mark{background:none;color:inherit;border-bottom:2px solid transparent;transition:border-color .45s,color .45s;padding:0 1px}
+.nl mark.on.v{border-color:var(--lp);color:var(--lp)}.nl mark.on.o{border-color:var(--ok);color:var(--ok)}.nl mark.on.c{border-color:var(--grad);color:var(--grad)}
+.model{margin-top:1.2rem;padding-top:1.2rem;border-top:1px dashed var(--line);font-size:1.08rem}
+.model .r{opacity:0;transform:translateY(4px);transition:opacity .5s,transform .5s;margin:.35rem 0;display:flex;gap:1rem;align-items:baseline}
+.model .r.on{opacity:1;transform:none}
+.model .r small{font-family:var(--sans);font-size:.75rem;color:var(--faint);font-style:normal;min-width:6.5rem}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:2.5rem}
+.three h3{font-size:1.25rem;margin-bottom:.35rem}
+.three p{color:var(--muted);margin:0}
+.three .n{font-family:var(--serif);color:var(--faint);font-size:1rem;display:block;margin-bottom:.4rem}
+
+/* gradient compare */
+.gc{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+.gc>div{border:1px solid var(--line);border-radius:8px;padding:1rem;overflow-x:auto}
+.gc h4{margin:0 0 .5rem;font-size:.9rem;font-weight:600}
+.gstep{border-left:2px solid var(--grad);padding:.4rem 0 .4rem .85rem;margin:.65rem 0;font-size:.92rem}
+.gstep .from{color:var(--faint);font-size:.75rem;font-family:var(--mono)}
+.gstep .g{color:var(--grad);font-family:var(--serif);font-style:italic;font-size:1.02rem}
+
+/* paradigms */
+.para{display:grid;grid-template-columns:300px 1fr;gap:2rem}
+.para-list{display:grid;gap:.4rem;align-content:start}
+.para-list button{text-align:left;background:none;border:1px solid var(--line);border-radius:8px;padding:.75rem .9rem;cursor:pointer}
+.para-list button[aria-pressed="true"]{border-color:var(--ok);background:var(--ok-soft)}
+.para-list button span{display:block;font-size:.78rem;color:var(--faint)}
+.para-view h3{margin-bottom:.3rem}
+.para-view .shape{margin:1rem 0 1.25rem}
+.works{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.75rem}
+.works span{border:1px solid var(--line);border-radius:4px;padding:.2rem .5rem;font-size:.82rem;color:var(--muted)}
+
+/* benchmarks */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th{text-align:left;font-weight:500;color:var(--muted);padding:.7rem .9rem;border-bottom:1px solid var(--line);font-size:.85rem;white-space:nowrap}
+td{padding:.85rem .9rem;border-bottom:1px solid var(--line-soft);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dsn{font-family:var(--serif);font-size:1.12rem}
+.pt{font-family:var(--mono);font-size:.7rem;padding:.08rem .38rem;border-radius:3px;border:1px solid var(--line);color:var(--muted);margin:0 .2rem .2rem 0;display:inline-block}
+.pt.LP{color:var(--lp);border-color:color-mix(in srgb,var(--lp) 45%,transparent)}
+.pt.IP{color:var(--ip);border-color:color-mix(in srgb,var(--ip) 45%,transparent)}
+.pt.MILP{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,transparent)}
+.pt.NLP{color:var(--grad);border-color:color-mix(in srgb,var(--grad) 45%,transparent)}
+.io{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem}
+.io>div{border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem}
+.io h4{margin:0 0 .35rem;font-size:.95rem}
+.io p{margin:0;color:var(--muted);font-size:.92rem}
+.lvl{display:inline-flex;gap:2px}.lvl i{width:6px;height:12px;background:var(--line);border-radius:1px}.lvl i.on{background:var(--muted)}
+
+/* metrics + challenges */
+.metric{display:grid;grid-template-columns:auto 1fr;gap:.7rem 1.5rem;align-items:baseline}
+.metric dt{font-weight:600}.metric dd{margin:0;color:var(--muted)}
+.challenges{display:grid;grid-template-columns:repeat(2,1fr);gap:0;border-top:1px solid var(--line-soft)}
+.challenges>div{padding:1.6rem 1.5rem 1.6rem 0;border-bottom:1px solid var(--line-soft)}
+.challenges>div:nth-child(odd){padding-right:2.5rem;border-right:1px solid var(--line-soft)}
+.challenges>div:nth-child(even){padding-left:2.5rem}
+.challenges h3{font-size:1.2rem;margin-bottom:.35rem}
+.challenges p{color:var(--muted);margin:0}
+
+/* survey */
+.survey{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(1.5rem,4vw,4rem);align-items:start}
+.cover{position:relative;border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:2.2rem 2rem 1.8rem;box-shadow:12px 12px 0 var(--surface-2)}
+.cover .venue{font-size:.8rem;color:var(--faint);margin-bottom:1.4rem}
+.cover h3{font-size:clamp(1.5rem,2.6vw,2.1rem);line-height:1.2;margin-bottom:1rem}
+.cover .authors{font-size:.98rem;margin-bottom:1.2rem}
+.cover .authors b{font-weight:600}
+.cover .aff{font-size:.85rem;color:var(--muted);margin-bottom:1.4rem}
+.cover .kw{display:flex;flex-wrap:wrap;gap:.35rem}
+.cover .kw span{font-size:.75rem;border:1px solid var(--line);border-radius:3px;padding:.15rem .45rem;color:var(--muted)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:.45rem 1.25rem;font-size:.92rem;margin:1.5rem 0}
+.facts dt{color:var(--muted)}.facts dd{margin:0}
+.covers{display:grid;gap:1rem;margin:1.5rem 0}
+.covers div{border-left:2px solid var(--ok);padding:.2rem 0 .2rem 1rem}
+.covers h4{margin:0 0 .2rem;font-size:1rem}
+.covers p{margin:0;color:var(--muted);font-size:.95rem}
+.pipe{display:grid;gap:.75rem;margin:1.5rem 0;counter-reset:st}
+.pipe div{border:1px solid var(--line);border-radius:8px;padding:.9rem 1rem}
+.bib{position:relative;margin-top:1rem}
+.bib pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:1rem 1.1rem;font:.78rem/1.55 var(--mono);overflow-x:auto;margin:0;white-space:pre}
+.bib button{position:absolute;top:.6rem;right:.6rem}
+.toast{position:fixed;bottom:1.25rem;left:50%;transform:translateX(-50%);background:var(--surface-2);border:1px solid var(--line);padding:.6rem 1rem;border-radius:8px;font-size:.9rem;z-index:200}
+
+/* footer */
+footer{border-top:1px solid var(--line-soft);padding:2.5rem clamp(1rem,3vw,2.5rem);color:var(--muted);font-size:.9rem;display:flex;gap:2rem;flex-wrap:wrap;justify-content:space-between}
+footer a{text-decoration:none}footer a:hover{color:var(--chalk)}
+
+@media (max-width:900px){
+  .hero{grid-template-columns:1fr}.hero-canvas{min-height:380px}.hero-copy{padding-right:1rem}
+  .two,.para,.survey,.gc{grid-template-columns:1fr}
+  .three,.io{grid-template-columns:1fr;gap:1.5rem}
+  .challenges{grid-template-columns:1fr}
+  .challenges>div:nth-child(n){padding:1.4rem 0;border-right:0}
+  .brand span{display:none}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.001s!important;animation:none!important}html{scroll-behavior:auto}}
+
+/* ===================================================================== v2 additions */
+.stats{display:flex;gap:2.2rem;flex-wrap:wrap;margin:2.2rem 0 0}
+.stats div{display:grid}
+.stats b{font-family:var(--serif);font-size:2rem;font-weight:500;line-height:1.1}
+.stats span{color:var(--muted);font-size:.85rem}
+.eyebrowless{font-size:.85rem;color:var(--faint);margin-bottom:.6rem}
+.insight{border-left:2px solid var(--ok);padding:.2rem 0 .2rem 1.1rem;margin:1.5rem 0 0;color:var(--muted);font-family:var(--serif);font-size:1.08rem}
+
+/* pipeline diagram */
+.pipe-wrap{position:relative;margin-bottom:1.5rem}
+.repairs{display:block;width:100%;height:74px}
+.repairs path{fill:none;stroke:var(--grad);stroke-width:1.5;stroke-dasharray:5 4;vector-effect:non-scaling-stroke}
+.repairs text{fill:var(--grad);font:italic 12px Newsreader,Georgia,serif}
+.pipe-row{display:grid;grid-template-columns:1fr 1.15fr 1.15fr 1.15fr 1.15fr 1fr;gap:.6rem;align-items:stretch}
+.pnode{border:1px solid var(--line);border-radius:10px;padding:.85rem .8rem;background:var(--surface);text-align:left;cursor:default;display:flex;flex-direction:column;gap:.3rem;min-height:118px;position:relative}
+.pnode.end{background:transparent;border-style:dashed}
+.pnode .k{font-size:.72rem;color:var(--faint)}
+.pnode .t{font-family:var(--serif);font-size:1.08rem;line-height:1.2}
+.pnode .c{font-size:.78rem;color:var(--muted);line-height:1.35}
+button.pnode{cursor:pointer;font:inherit;color:inherit}
+button.pnode:hover{border-color:var(--faint)}
+button.pnode[aria-pressed="true"]{border-color:var(--ok);background:var(--ok-soft)}
+.pnode:not(:last-child)::after{content:"";position:absolute;right:-.55rem;top:50%;width:.5rem;height:1px;background:var(--faint)}
+.stage-panel{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(1.25rem,3vw,2.5rem);border:1px solid var(--line);border-radius:14px;padding:clamp(1.25rem,2.5vw,2rem);background:var(--surface)}
+.stage-panel h3{font-size:1.6rem;margin-bottom:.25rem}
+.stage-panel .chal{color:var(--grad);font-family:var(--serif);font-style:italic;font-size:1.05rem;margin-bottom:.9rem}
+.stage-panel .why{color:var(--muted);margin-bottom:1.1rem}
+.tech{border-top:1px solid var(--line-soft);padding:.9rem 0}
+.tech:first-child{border-top:0;padding-top:0}
+.tech h4{margin:0 0 .25rem;font-size:1rem}
+.tech p{margin:0 0 .45rem;color:var(--muted);font-size:.92rem}
+.works{display:flex;flex-wrap:wrap;gap:.35rem}
+.works span{border:1px solid var(--line);border-radius:4px;padding:.12rem .45rem;font-size:.78rem;color:var(--muted)}
+.example{border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem;background:var(--ink);font-size:.9rem}
+.example .lab{font-size:.75rem;color:var(--faint);margin-bottom:.5rem}
+.fields{display:grid;grid-template-columns:auto 1fr;gap:.3rem .9rem;font-size:.86rem;margin:0}
+.fields dt{color:var(--muted)}.fields dd{margin:0}
+.fields dd.open{color:var(--grad)}
+.ex-rows .r{margin:.3rem 0}
+.ex-code{font:.78rem/1.6 var(--mono);white-space:pre;overflow-x:auto;margin:0;color:var(--chalk)}
+.ex-code .cm{color:var(--faint)}
+.sig{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.sig ul{margin:0;padding-left:1.1rem;font-size:.86rem}
+.sig li{margin:.15rem 0}
+.route{display:grid;gap:.5rem;margin-top:.9rem}
+.route div{display:grid;grid-template-columns:9rem 1fr;gap:.6rem;font-size:.86rem;align-items:baseline}
+.route b{font-weight:500;color:var(--grad)}
+
+/* benchmarks */
+.cats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem}
+.cat{border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem;background:none;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.cat[aria-pressed="true"]{background:var(--surface)}
+.cat .tag{font-family:var(--mono);font-size:.72rem;border-radius:3px;padding:.05rem .35rem;margin-right:.4rem}
+.cat h4{margin:.4rem 0 .3rem;font-size:1rem}
+.cat p{margin:0;color:var(--muted);font-size:.86rem;line-height:1.45}
+.cat .cnt{font-family:var(--serif);font-size:1.6rem;float:right;line-height:1;color:var(--muted)}
+.CF{--cc:#7cc7f2}.ES{--cc:#62d2a2}.RI{--cc:#f0b44c}.DS{--cc:#c4a7f5}
+:root[data-theme="light"] .CF{--cc:#1f78b4}:root[data-theme="light"] .ES{--cc:#128a5b}:root[data-theme="light"] .RI{--cc:#a86a00}:root[data-theme="light"] .DS{--cc:#7b52c7}
+.cat{border-top:3px solid var(--cc)}
+.cat[aria-pressed="true"]{border-color:var(--cc)}
+.tag{color:var(--cc);border:1px solid var(--cc)}
+.timeline{display:grid;grid-template-columns:1fr 1fr 1.2fr 2.2fr;gap:1rem;align-items:end;position:relative;padding-bottom:3.6rem}
+.timeline::after{content:"";position:absolute;left:0;right:0;bottom:2.4rem;height:2px;background:var(--line)}
+.yr{display:flex;flex-direction:column-reverse;gap:.3rem}
+.yr .lbl{position:absolute;bottom:0;font-family:var(--serif);font-size:1.4rem}
+.yrcol{position:relative;display:flex;flex-direction:column;gap:.3rem;justify-content:flex-end;min-height:40px}
+.yrcol.big{display:grid;grid-template-columns:1fr 1fr;align-content:end}
+.yrcol .foot{position:absolute;bottom:-3.6rem;left:0;display:flex;gap:.6rem;align-items:baseline}
+.yrcol .foot b{font-family:var(--serif);font-size:1.5rem;font-weight:500}
+.yrcol .foot span{font-size:.8rem;color:var(--muted)}
+.bm{display:flex;align-items:center;gap:.45rem;border:1px solid var(--line);border-left:3px solid var(--cc);border-radius:5px;padding:.3rem .55rem;font-size:.82rem;background:var(--surface);cursor:pointer;text-align:left;font-family:inherit;color:inherit}
+.bm:hover,.bm[aria-pressed="true"]{border-color:var(--cc)}
+.bm.dim{opacity:.25}
+.bm-detail{margin-top:1.5rem;border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.25rem;display:grid;grid-template-columns:auto 1fr;gap:.4rem 1.25rem;font-size:.92rem}
+.bm-detail dt{color:var(--muted)}.bm-detail dd{margin:0}
+
+/* metrics */
+.levels{display:grid;grid-template-columns:2fr 1fr;gap:1rem}
+.level{border:1px solid var(--line);border-radius:12px;padding:1.1rem}
+.level>h4{margin:0 0 .8rem;font-size:.95rem;color:var(--muted);font-weight:500}
+.mfam{display:grid;gap:.6rem}
+.level.out .mfam{grid-template-columns:repeat(2,1fr)}
+.mf{background:var(--surface);border:1px solid var(--line-soft);border-radius:8px;padding:.8rem .9rem}
+.mf h5{margin:0 0 .25rem;font-size:.95rem;font-weight:600}
+.mf p{margin:0 0 .4rem;font-size:.85rem;color:var(--muted)}
+.mf .ex{font-size:.75rem;color:var(--faint)}
+.ladder{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin:1.5rem 0 .5rem;font-size:.88rem}
+.ladder span{border:1px solid var(--line);border-radius:999px;padding:.3rem .75rem}
+.ladder i{color:var(--faint);font-style:normal}
+
+/* agenda */
+.agenda{display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid var(--line-soft)}
+.agenda>div{padding:1.5rem 2rem 1.5rem 0;border-bottom:1px solid var(--line-soft)}
+.agenda>div:nth-child(odd){border-right:1px solid var(--line-soft)}
+.agenda>div:nth-child(even){padding-left:2rem;padding-right:0}
+.agenda .ft{display:flex;flex-wrap:wrap;gap:.35rem .6rem;align-items:baseline;margin-bottom:.4rem}
+.agenda .from{color:var(--faint);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--bad) 60%,transparent);font-size:.95rem}
+.agenda .arrow{color:var(--grad)}
+.agenda .to{font-family:var(--serif);font-size:1.25rem}
+.agenda p{margin:0;color:var(--muted);font-size:.93rem}
+.agenda .num{font-family:var(--serif);color:var(--faint);font-size:.9rem;margin-right:.3rem}
+
+/* survey */
+.contrib{display:grid;gap:.9rem;margin:0 0 1.5rem}
+.contrib>div{display:grid;grid-template-columns:2.2rem 1fr;gap:.2rem}
+.contrib .n{font-family:var(--serif);font-size:1.3rem;color:var(--ok);line-height:1.2}
+.contrib h4{margin:0 0 .15rem;font-size:1rem}
+.contrib p{margin:0;color:var(--muted);font-size:.92rem}
+.funnel{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;font-size:.85rem;margin:.4rem 0 1.4rem}
+.funnel span{border:1px solid var(--line);border-radius:4px;padding:.2rem .55rem}
+.funnel span b{font-weight:600}
+.funnel i{color:var(--faint);font-style:normal}
+.quote{font-family:var(--serif);font-size:clamp(1.25rem,2vw,1.6rem);line-height:1.4;border-left:2px solid var(--ok);padding-left:1.4rem;margin:3rem 0 0;max-width:46ch}
+.quote cite{display:block;font-family:var(--sans);font-style:normal;font-size:.85rem;color:var(--muted);margin-top:.7rem}
+.authors-list{font-size:.9rem;line-height:1.55;margin-bottom:1.3rem}
+.authors-list div{margin:.1rem 0}
+.authors-list span{color:var(--muted)}
+
+@media (max-width:1000px){
+  .pipe-row{grid-template-columns:1fr 1fr 1fr}
+  .repairs{display:none}
+  .pnode:not(:last-child)::after{display:none}
+  .stage-panel,.levels,.sig{grid-template-columns:1fr}
+  .cats{grid-template-columns:1fr 1fr}
+  .timeline{grid-template-columns:1fr 1fr;row-gap:5rem}.yrcol.big{grid-column:1 / -1}
+  .timeline::after{display:none}
+}
+@media (max-width:640px){
+  .pipe-row{grid-template-columns:1fr 1fr}
+  .cats,.agenda,.level.out .mfam{grid-template-columns:1fr}
+  .agenda>div:nth-child(n){padding:1.3rem 0;border-right:0}
+  .timeline{grid-template-columns:1fr}.yrcol.big{grid-template-columns:1fr}
+  .route div{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#what" data-k="skip">Skip to content</a>
+
+<header class="nav">
+  <a class="brand" href="#top" aria-label="Autoformulation home">
+    <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><path d="M5 26 L16 5 L27 26 Z" fill="none" stroke="var(--ok)" stroke-width="2"/><circle cx="16" cy="5" r="2.6" fill="var(--ok)"/><circle cx="10.5" cy="15.5" r="2.2" fill="var(--grad)"/><circle cx="21.5" cy="15.5" r="2.2" fill="var(--chalk)"/><circle cx="16" cy="26" r="2.6" fill="var(--ok)"/></svg>
+    <span>LLM Autoformulation</span>
+  </a>
+  <nav class="links" aria-label="Sections">
+    <a href="#what" data-k="nav.what">What it is</a>
+    <a href="#pipeline" data-k="nav.pipe">The pipeline</a>
+    <a href="#search" data-k="nav.search">As search</a>
+    <a href="#benchmarks" data-k="nav.bench">Benchmarks</a>
+    <a href="#evaluation" data-k="nav.eval">Evaluation</a>
+    <a href="#agenda" data-k="nav.agenda">Open problems</a>
+    <a href="#survey" data-k="nav.survey">The survey</a>
+  </nav>
+  <div class="tools">
+    <button class="ib" id="lang" type="button" aria-label="切换到中文">中文</button>
+    <button class="ib" id="theme" type="button" aria-label="Toggle light or dark theme"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></button>
+  </div>
+</header>
+
+<main id="top">
+<!-- ================================================================= HERO -->
+<section class="hero" aria-labelledby="h1">
+  <div class="hero-copy">
+    <a class="paper-tag" href="#survey"><b data-k="hero.new">New</b><span data-k="hero.tag">A survey of LLM-based autoformulation</span></a>
+    <h1 id="h1" data-k="hero.title">From natural language to optimization models.</h1>
+    <p class="lede" data-k="hero.lede">Autoformulation is the automatic translation of natural-language problem descriptions into formal optimization formulations or solver-ready code. Large language models read the problem; established solvers do the mathematics.</p>
+    <div class="row">
+      <a class="btn primary" href="https://ssrn.com/abstract=7204798" target="_blank" rel="noopener" data-k="hero.read">Read the survey</a>
+      <a class="btn" href="#pipeline" data-k="hero.learn">Explore the pipeline</a>
+    </div>
+    <div class="stats">
+      <div><b>94</b><span data-k="hero.s1">primary studies reviewed</span></div>
+      <div><b>31</b><span data-k="hero.s2">benchmarks compared</span></div>
+      <div><b>4</b><span data-k="hero.s3">pipeline stages</span></div>
+    </div>
+  </div>
+  <div class="hero-canvas">
+    <canvas id="tree" role="img" aria-label="Animated search tree: candidate formulations branch out from a natural-language problem; edges are labelled with the feedback that produced each step."></canvas>
+    <div class="tip" id="tip" hidden></div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--chalk)"></i><span data-k="lg.open">candidate</span></span>
+      <span><i class="dot" style="background:var(--ok)"></i><span data-k="lg.ok">feasible, matches</span></span>
+      <span><i class="dot" style="background:var(--bad)"></i><span data-k="lg.bad">infeasible</span></span>
+      <span style="color:var(--grad);font-family:var(--serif);font-style:italic">∇ <span data-k="lg.grad">verbal gradient</span></span>
+      <button class="ib" id="pause" type="button" data-k="lg.pause">Pause motion</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================= WHAT -->
+<section class="block" id="what" aria-labelledby="what-t">
+  <div class="wrap two">
+    <div class="prose">
+      <h2 id="what-t" data-k="what.t">What is autoformulation?</h2>
+      <p data-k="what.p1">An optimization model has three parts. <strong>Decision variables</strong> are what we may choose. The <strong>objective</strong> scores a choice. <strong>Constraints</strong> say which choices are allowed. Once these are written precisely, solvers such as Gurobi or CPLEX find the best choice quickly.</p>
+      <p data-k="what.p2">Writing them down is the bottleneck. Real problems arrive as text, business rules and spreadsheets, and turning them into rigorous mathematics and executable code has traditionally been manual, slow and iterative work for experts.</p>
+      <p data-k="what.p3"><strong>Autoformulation</strong> hands that translation to a large language model, which reads the description and produces the model and the solver code.</p>
+      <p class="insight" data-k="what.insight">Asking an LLM for the numerical answer directly does not work well, because feasibility and optimality cannot be guaranteed. Autoformulation separates language understanding from numerical optimization: the LLM builds the model, and a solver checks feasibility and optimality within its tolerances.</p>
+    </div>
+    <div class="figure">
+      <div class="nl" id="nl"></div>
+      <div class="model" id="model"></div>
+      <div class="row" style="margin-top:1.1rem"><button class="btn" id="play" type="button" data-k="what.play">Play</button></div>
+      <p class="cap" data-k="what.cap">Variables in blue, objective in mint, constraints in amber. The optimum is 540, at 120 muffins and 120 croissants.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================= WHY -->
+<section class="block" aria-labelledby="why-t">
+  <div class="wrap">
+    <div class="sec-head"><h2 id="why-t" data-k="why.t">Why it is hard</h2></div>
+    <div class="three">
+      <div><span class="n">i</span><h3 data-k="why.1t">Descriptions are incomplete</h3><p data-k="why.1p">Bounds, units, index sets and default assumptions are often implicit. Words like "capacity", "shift" or "coverage" carry modeling meaning that ordinary language does not spell out.</p></div>
+      <div><span class="n">ii</span><h3 data-k="why.2t">Modeling is a skill</h3><p data-k="why.2p">Understanding the story is not enough. Choosing variables, separating hard constraints from soft preferences and applying standard patterns such as linearizations takes expertise.</p></div>
+      <div><span class="n">iii</span><h3 data-k="why.3t">Running is not the same as right</h3><p data-k="why.3p">Code can execute while solving the wrong problem. The real question is whether the generated model faithfully reflects the intended one.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================= PIPELINE -->
+<section class="block" id="pipeline" aria-labelledby="pipe-t">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrowless" data-k="pipe.from">From the survey, Section 3</div>
+      <h2 id="pipe-t" data-k="pipe.t">A unified four-stage pipeline</h2>
+      <p data-k="pipe.p">Autoformulation turns a natural-language description into an executable, verifiable artifact. The survey decomposes the process into four functional stages, each with its own core challenge and family of techniques. Not every system implements every stage as an explicit module. Select a stage to explore it with a running example.</p>
+    </div>
+    <div class="pipe-wrap">
+      <svg class="repairs" id="repairs" viewBox="0 0 1000 74" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div class="pipe-row" id="pipe-row"></div>
+    </div>
+    <div class="stage-panel" id="stage-panel" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- ================================================================= SEARCH -->
+<section class="block" id="search" aria-labelledby="search-t">
+  <div class="wrap two">
+    <div class="prose">
+      <h2 id="search-t" data-k="s.t">When patching is not enough: refinement as search</h2>
+      <p data-k="s.p1">Local repair fixes a missing constraint or a wrong API call. But if the modeling abstraction itself is poor, editing the same formulation goes nowhere. Refinement then becomes a <strong>search over candidate formulations</strong> in a symbolic space: a discrete set of expressions where distant-looking points, such as an edge-based and a position-based routing model, can be equivalent.</p>
+      <p data-k="s.p2">Numerical optimization moves along a gradient. Symbolic space has no derivatives, but solver evidence can be written in words. An infeasibility report, a failed behavioural test or a units check becomes a critique such as <em>"trucks must be integers"</em>. That critique acts as a <span class="k-grad">verbal gradient</span>: it points toward a better neighbour.</p>
+      <p data-k="s.p3">Tree search over modeling thoughts, test-time search, and co-evolution of generators and verifiers are examples of this idea in the literature.</p>
+    </div>
+    <div>
+      <div class="figure" style="margin-bottom:1rem"><div id="space"></div><p class="cap" data-k="s.cap">Each dot is a candidate model. Mint: correct optimum. Coral: infeasible or wrong. Amber: one search trajectory, each step labelled with its verbal gradient.</p></div>
+      <div class="figure">
+        <div class="gc">
+          <div><h4 data-k="s.num">Numerical gradient</h4><div id="eq-num"></div></div>
+          <div><h4 style="color:var(--grad)" data-k="s.verb">Verbal gradient</h4><div id="eq-verb"></div></div>
+        </div>
+        <div id="gsteps"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================= BENCHMARKS -->
+<section class="block" id="benchmarks" aria-labelledby="b-t">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrowless" data-k="b.from">From the survey, Section 4</div>
+      <h2 id="b-t" data-k="b.t">31 benchmarks in four design orientations</h2>
+      <p data-k="b.p">Benchmarks moved quickly from short, clean word problems toward executable, realistic, industrial and domain-specific datasets after 2025. Grouping them by what they were built to test clarifies what a score actually means.</p>
+    </div>
+    <div class="cats" id="cats"></div>
+    <div class="timeline" id="timeline"></div>
+    <dl class="bm-detail" id="bm-detail"></dl>
+    <p class="cap"><span data-k="b.repo">Download links for every dataset are maintained in the open-source repository</span> <a href="https://github.com/buaaguotong/Awesome-LLM4Formulation" target="_blank" rel="noopener">Awesome-LLM4Formulation</a>.</p>
+  </div>
+</section>
+
+<!-- ================================================================= EVALUATION -->
+<section class="block" id="evaluation" aria-labelledby="e-t">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrowless" data-k="e.from">From the survey, Section 5</div>
+      <h2 id="e-t" data-k="e.t">A two-level taxonomy of metrics</h2>
+      <p data-k="e.p">Systems produce different artifacts and fail in different ways: a formulation can be structurally wrong, code can fail to run, and an executable model can still return an infeasible or poor solution. The survey separates outcome-level metrics, which judge specific outputs, from system-level metrics, which judge the whole pipeline.</p>
+    </div>
+    <div class="levels" id="levels"></div>
+    <div class="ladder" id="ladder"></div>
+    <p class="cap" data-k="e.note">Recommended order of checks. Task success is defined on top of this pipeline by each benchmark's acceptance criterion, and should always be reported together with that criterion.</p>
+  </div>
+</section>
+
+<!-- ================================================================= AGENDA -->
+<section class="block" id="agenda" aria-labelledby="a-t">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrowless" data-k="a.from">From the survey, Section 6</div>
+      <h2 id="a-t" data-k="a.t">Open problems: eight shifts the field needs</h2>
+      <p data-k="a.p">Most reported results come from controlled conditions: complete input, clean data and a well-defined expected output. Practical modeling rarely looks like that. Each direction below turns a current assumption into a research question.</p>
+    </div>
+    <div class="agenda" id="agenda-list"></div>
+  </div>
+</section>
+
+<!-- ================================================================= SURVEY -->
+<section class="block" id="survey" aria-labelledby="sv-t">
+  <div class="wrap">
+    <div class="sec-head"><h2 id="sv-t" data-k="sv.t">The survey</h2><p data-k="sv.p">The first systematic and in-depth synthesis that treats LLM-based autoformulation as a distinct, multi-stage, solver-grounded research problem, connecting methods, datasets and evaluation in one view.</p></div>
+    <div class="survey">
+      <article class="cover" aria-label="Paper">
+        <div class="venue">SSRN 7204798 · 2026 · 34 pp.</div>
+        <h3>From Natural Language to Optimization Models: A Survey of LLM-based Autoformulation</h3>
+        <div class="authors-list">
+          <div><b>Tong Guo</b> <span>· Nanyang Technological University</span></div>
+          <div>Yi Mei <span>· Victoria University of Wellington</span></div>
+          <div>Yaoxin Wu <span>· Eindhoven University of Technology</span></div>
+          <div>Tan Chin Sheng <span>· SIMTech, A*STAR</span></div>
+          <div>Huey Yuen Ng <span>· SIMTech, A*STAR</span></div>
+          <div>Yew-Soon Ong <span>· Nanyang Technological University</span></div>
+        </div>
+        <div class="kw"><span>Large Language Models</span><span>Autoformulation</span><span>Combinatorial Optimization</span><span>Operations Research</span><span>Optimization Modeling</span><span>Mathematical Optimization</span></div>
+      </article>
+      <div>
+        <div class="contrib" id="contrib"></div>
+        <div class="xs muted" data-k="sv.method">How the literature was collected (search last updated 30 June 2026)</div>
+        <div class="funnel" id="funnel"></div>
+        <div class="row">
+          <a class="btn primary" href="https://ssrn.com/abstract=7204798" target="_blank" rel="noopener" data-k="sv.read">Read on SSRN</a>
+          <a class="btn" href="https://github.com/buaaguotong/Awesome-LLM4Formulation" target="_blank" rel="noopener" data-k="sv.repo">Dataset repository</a>
+          <button class="btn" type="button" id="copybib" data-k="sv.cite">Copy BibTeX</button>
+        </div>
+        <div class="bib"><pre id="bibtex">@article{guo2026autoformulation,
+  title   = {From Natural Language to Optimization Models:
+             A Survey of LLM-based Autoformulation},
+  author  = {Guo, Tong and Mei, Yi and Wu, Yaoxin and Tan, Chin Sheng
+             and Ng, Huey Yuen and Ong, Yew-Soon},
+  journal = {Available at SSRN 7204798},
+  year    = {2026},
+  doi     = {10.2139/ssrn.7204798}
+}</pre></div>
+      </div>
+    </div>
+    <blockquote class="quote"><span data-k="sv.quote">Producing executable solver code is no longer the only challenge. A more fundamental issue is whether the generated model faithfully reflects the intended problem.</span><cite data-k="sv.qcite">From the survey's conclusion</cite></blockquote>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div>
+    <div style="font-family:var(--serif);font-size:1.1rem;color:var(--chalk)">LLM Autoformulation</div>
+    <div data-k="f.tag">An introduction to turning natural language into optimization models.</div>
+  </div>
+  <div>
+    <div data-k="f.contact">Contact: Tong Guo, Nanyang Technological University</div>
+    <a href="mailto:tong.guo@ntu.edu.sg">tong.guo@ntu.edu.sg</a>
+  </div>
+</footer>
+<script>
+(function () {
+"use strict";
+/* ===================================================================== i18n (static text) */
+var ZH = {
+  "skip": "跳到正文",
+  "nav.what": "什么是自动建模", "nav.pipe": "四阶段流程", "nav.search": "搜索视角", "nav.bench": "基准", "nav.eval": "评测", "nav.agenda": "开放问题", "nav.survey": "综述",
+  "hero.new": "新", "hero.tag": "LLM 自动建模综述",
+  "hero.title": "从自然语言，到优化模型。",
+  "hero.lede": "自动建模（autoformulation）是把自然语言问题描述自动翻译成形式化优化模型或可直接求解代码的过程：大语言模型负责读懂问题，成熟的求解器负责数学计算。",
+  "hero.read": "阅读综述", "hero.learn": "探索四阶段流程",
+  "hero.s1": "篇核心文献", "hero.s2": "个基准数据集", "hero.s3": "个流程阶段",
+  "lg.open": "候选模型", "lg.ok": "可行且正确", "lg.bad": "不可行", "lg.grad": "语言梯度", "lg.pause": "暂停动画", "lg.resume": "继续动画",
+  "what.t": "什么是自动建模？",
+  "what.p1": "一个优化模型由三部分组成：<strong>决策变量</strong>是我们可以选择的东西；<strong>目标函数</strong>为每个选择打分；<strong>约束</strong>规定哪些选择被允许。只要这三部分被精确写出，Gurobi、CPLEX 等求解器就能很快找到最优解。",
+  "what.p2": "难点在于把它们写出来。真实问题以文字、业务规则和表格的形式出现，把它们变成严谨的数学和可执行代码，传统上依赖专家手工完成，耗时、费力且需要反复迭代。",
+  "what.p3": "<strong>自动建模</strong>把这一翻译交给大语言模型：读懂描述，生成模型与求解代码。",
+  "what.insight": "直接让 LLM 输出数值答案效果并不好，因为无法保证可行性与最优性。自动建模把语言理解与数值优化分开：LLM 负责构建模型，求解器在数值容差内检验可行性与最优性。",
+  "what.play": "播放", "what.replay": "重播",
+  "what.cap": "蓝色为变量，薄荷绿为目标，琥珀色为约束。最优值为 540，即玛芬和可颂各 120 个。",
+  "why.t": "难在哪里",
+  "why.1t": "描述往往不完整", "why.1p": "上下界、单位、下标集合和默认假设常常是隐含的；“产能”“班次”“覆盖”这样的词背后有建模含义，日常语言并不会说明。",
+  "why.2t": "建模是一门技能", "why.2p": "读懂故事还不够。选择变量、区分硬约束与软偏好、运用线性化等标准建模技巧，都需要专业经验。",
+  "why.3t": "能运行不等于正确", "why.3p": "代码可能顺利运行，却求解了一个错误的问题。真正的问题是：生成的模型是否忠实反映了原本的意图。",
+  "pipe.from": "来自综述第 3 节", "pipe.t": "统一的四阶段流程",
+  "pipe.p": "自动建模把自然语言描述转化为可执行、可验证的产物。综述把这一过程分解为四个功能阶段，每个阶段都有核心挑战和对应的技术族。并非每个系统都显式实现每个阶段。点击一个阶段，结合贯穿始终的示例查看详情。",
+  "s.t": "当修补不够时：把精炼看作搜索",
+  "s.p1": "局部修复可以补上缺失的约束或改正错误的 API 调用；但如果建模抽象本身不好，反复修改同一个模型是走不通的。这时精炼就变成了在符号空间中<strong>对候选模型的搜索</strong>：这是一个离散的表达式空间，看似相距很远的点可能是等价的，比如基于边与基于位置的两种路径模型。",
+  "s.p2": "数值优化沿着梯度移动。符号空间没有导数，但求解器给出的证据可以用文字写出来：不可行报告、未通过的行为测试或单位检查，都可以变成一句批评，例如<em>“卡车数量必须是整数”</em>。这句批评就像<span class=\"k-grad\">语言梯度</span>，指向一个更好的邻居。",
+  "s.p3": "在建模思路上做树搜索、推理时搜索、生成器与验证器的协同进化，都是文献中这一思路的例子。",
+  "s.cap": "每个点是一个候选模型。薄荷绿：最优值正确；珊瑚红：不可行或错误；琥珀色：一条搜索轨迹，每一步都标注了它的语言梯度。",
+  "s.num": "数值梯度", "s.verb": "语言梯度",
+  "b.from": "来自综述第 4 节", "b.t": "31 个基准，四种设计取向",
+  "b.p": "2025 年以后，基准迅速从简短、干净的应用题，转向可执行、贴近现实、面向工业以及特定领域的数据集。按“它被设计来测什么”分组，才能看清一个分数真正意味着什么。",
+  "b.repo": "所有数据集的下载链接都整理在开源仓库",
+  "e.from": "来自综述第 5 节", "e.t": "两层评测指标体系",
+  "e.p": "系统产出的东西不同，失败的方式也不同：模型结构可能有误，代码可能无法运行，可运行的模型也可能给出不可行或质量很差的解。综述区分了两层：评判具体产出的“结果层”指标，与评判整条流程的“系统层”指标。",
+  "e.note": "推荐的检查顺序。任务成功由各基准的验收标准在这条流程之上定义，报告时应同时说明该标准。",
+  "a.from": "来自综述第 6 节", "a.t": "开放问题：领域需要的八个转变",
+  "a.p": "大多数已报告的结果来自受控条件：输入完整、数据干净、期望输出明确。真实建模很少如此。下面每个方向，都把一个现有假设转化为一个研究问题。",
+  "sv.t": "综述", "sv.p": "首个把 LLM 自动建模作为独立的、多阶段的、以求解器为依据的研究问题来系统深入梳理的工作，把方法、数据与评测统一到一个视角中。",
+  "sv.method": "文献收集过程（检索截至 2026 年 6 月 30 日）",
+  "sv.read": "在 SSRN 阅读", "sv.repo": "数据集仓库", "sv.cite": "复制 BibTeX", "sv.copied": "已复制 BibTeX",
+  "sv.quote": "生成可执行的求解代码已不再是唯一的挑战。更根本的问题是：生成的模型是否忠实反映了原本想要解决的问题。",
+  "sv.qcite": "摘自综述结论",
+  "f.tag": "一份关于“把自然语言变成优化模型”的入门介绍。", "f.contact": "联系人：Tong Guo，南洋理工大学"
+};
+var EN = {"lg.resume": "Resume motion", "what.replay": "Replay", "sv.copied": "BibTeX copied"};
+var lang = "en";
+try { lang = localStorage.getItem("af.lang") || ((navigator.language || "").toLowerCase().indexOf("zh") === 0 ? "zh" : "en"); } catch (e) {}
+function T(k) { return lang === "zh" ? (ZH[k] || EN[k] || k) : (EN[k] || k); }
+function L(o) { return typeof o === "string" ? o : (o[lang] || o.en); }
+function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
+
+/* ===================================================================== math */
+function tex(src, display) {
+  if (window.katex) { try { return katex.renderToString(src, {displayMode: !!display, throwOnError: false, strict: "ignore"}); } catch (e) {} }
+  var h = '<span class="math">' + texFallback(src) + "</span>"; return display ? "<div>" + h + "</div>" : h;
+}
+var SYM = {varepsilon:"ε",epsilon:"ε",forall:"∀",theta:"θ",nabla:"∇",eta:"η",quad:"  ",star:"⋆",sum:"Σ",leq:"≤",geq:"≥",le:"≤",ge:"≥",in:"∈",max:"max ",min:"min ",cdot:"·",left:"",right:"",big:"",textstyle:"",mathrm:""};
+function texFallback(s) {
+  s = String(s).replace(/\\mathbb\{Z\}/g, "ℤ").replace(/\\mathbb\{R\}/g, "ℝ").replace(/\\mathcal\{(\w)\}/g, "$1")
+    .replace(/\\(?:text|mathrm)\{([^{}]*)\}/g, "$1").replace(/\\[,;! ]/g, " ").replace(/\\\{/g, "⦃").replace(/\\\}/g, "⦄")
+    .replace(/\\([a-zA-Z]+)/g, function (m, n) { return n in SYM ? SYM[n] : n; });
+  s = esc(s).replace(/_\{([^{}]*)\}/g, "<sub>$1</sub>").replace(/\^\{([^{}]*)\}/g, "<sup>$1</sup>")
+    .replace(/_(\w)/g, "<sub>$1</sub>").replace(/\^(\w|⋆)/g, "<sup>$1</sup>").replace(/[{}]/g, "").replace(/⦃/g, "{").replace(/⦄/g, "}");
+  return s;
+}
+
+/* ===================================================================== content: words to model */
+var BAKERY = {
+  en: [["A bakery makes "],["muffins","v"],[" and "],["croissants","v"],[". Each muffin "],["earns $2.00","o"],[" and each croissant "],["earns $2.50","o"],[". A muffin needs 0.10 kg of flour and a croissant 0.15 kg; "],["30 kg of flour","c"],[" are available per day. The oven bakes "],["at most 240 items","c"],[" a day, and the café has ordered "],["at least 50 croissants","c"],[". How many of each should it bake to "],["maximise profit","o"],["?"]],
+  zh: [["一家面包店制作"],["玛芬","v"],["和"],["可颂","v"],["。每个玛芬"],["赚 2.00 美元","o"],["，每个可颂"],["赚 2.50 美元","o"],["。一个玛芬需要 0.10 kg 面粉，一个可颂需要 0.15 kg；每天"],["可用面粉 30 kg","c"],["。烤箱每天"],["最多烤 240 个","c"],["，咖啡馆已订购"],["至少 50 个可颂","c"],["。各烤多少个才能"],["使利润最大","o"],["？"]]
+};
+var MODEL = [
+  ["v", {en:"variables",zh:"变量"}, "x_m,\\ x_c\\in\\mathbb{Z}_{\\ge 0}"],
+  ["o", {en:"objective",zh:"目标"}, "\\max\\ 2.00\\,x_m+2.50\\,x_c"],
+  ["c", {en:"flour",zh:"面粉"}, "0.10\\,x_m+0.15\\,x_c\\le 30"],
+  ["c", {en:"oven",zh:"烤箱"}, "x_m+x_c\\le 240"],
+  ["c", {en:"order",zh:"订单"}, "x_c\\ge 50"]
+];
+
+/* ===================================================================== content: the four-stage pipeline (survey §3) */
+var RAW = {en:"“Each shift must have enough workers. Workers work only when available. No worker exceeds capacity. Night shifts are prioritized. Workers have different costs.”",
+           zh:"“每个班次必须有足够的工人。工人只在可用时上班。任何工人都不能超过其工作上限。夜班优先。不同工人的成本不同。”"};
+var STAGES = [
+  { id: "interp", name: {en:"Problem interpretation", zh:"问题理解"},
+    chal: {en:"Incomplete and ambiguous problem descriptions", zh:"问题描述不完整、有歧义"},
+    short: {en:"text → structured understanding", zh:"文本 → 结构化理解"},
+    why: {en:"Turns raw text into a structured understanding: entities, sets, parameters, candidate variables, objectives, constraints, assumptions and domain rules. If gaps are filled by unsupported guesses, later stages produce a plausible but incorrect formulation.",
+          zh:"把原始文本转化为结构化理解：实体、集合、参数、候选变量、目标、约束、假设与领域规则。如果用没有依据的猜测来填补空白，后续阶段就会产生看似合理却错误的模型。"},
+    tech: [
+      { t:{en:"Structured problem representation", zh:"结构化问题表示"},
+        d:{en:"Prompt the LLM to reorganise the description into explicit modeling fields, separating stated facts from assumptions and open questions.", zh:"提示 LLM 把描述重组为明确的建模字段，把已陈述的事实与假设、待定问题区分开。"},
+        w:["OptiMUS (SNOP schema)","LLMOPT (five-element formulation)","LEAN-LLM-OPT (abstract model plan)","R2C (canonical representation)"] },
+      { t:{en:"Interactive clarification and explicit defaults", zh:"交互式澄清与显式默认推理"},
+        d:{en:"Ask targeted questions about critical business requirements; state conventional assumptions such as non-negativity or integrality explicitly, never as hidden guesses.", zh:"针对关键业务需求提出有针对性的问题；对非负、整数等惯例假设显式说明，而不是隐藏的猜测。"},
+        w:["OptLLM","OptiChat","Decision Optimization CoPilot","AlphaOPT (missing-data defaults)","OptiMind"] },
+      { t:{en:"Domain knowledge retrieval", zh:"领域知识检索"},
+        d:{en:"Retrieve rules, similar examples or constraint patterns before formulation choices are fixed.", zh:"在建模选择确定之前，检索相关规则、相似例子或约束模式。"},
+        w:["DRoC","MIRROR","OptiMUS-0.3"] }
+    ] },
+  { id: "form", name: {en:"Formulation generation", zh:"模型生成"},
+    chal: {en:"Limited optimization-modeling capability", zh:"优化建模能力有限"},
+    short: {en:"understanding → mathematical model", zh:"理解 → 数学模型"},
+    why: {en:"Less about understanding words, more about modeling decisions: choosing decision and auxiliary variables, an effective constraint structure, hard versus soft requirements, and standard domain-specific patterns.",
+          zh:"关键不在于读懂文字，而在于做出正确的建模决策：选择决策变量与辅助变量、有效的约束结构、区分硬约束与软偏好，并运用领域内的标准建模模式。"},
+    tech: [
+      { t:{en:"Workflow and task decomposition", zh:"流程与任务分解"},
+        d:{en:"Break modeling into smaller, inspectable steps, or assign them to specialised agents that collaborate, execute and reflect.", zh:"把建模拆成更小、可检查的步骤；或把它们分配给协作、执行并反思的专门智能体。"},
+        w:["LEAN-LLM-OPT","ReLoop","ORThought","ORMind","OptiMUS","OR-LLM-Agent","Chain-of-Experts","MM-Agent"] },
+      { t:{en:"Fine-tuning with formulation and process supervision", zh:"基于模型与过程监督的微调"},
+        d:{en:"Adapt the model itself: supervised fine-tuning on final formulations, or process-level supervision with reasoning traces, preference optimisation and reinforcement learning with verifiable rewards.", zh:"改进模型本身：在最终模型上做监督微调，或用推理轨迹、偏好优化和可验证奖励的强化学习进行过程级监督。"},
+        w:["LM4OPT","ORLM","LLMOPT","EvoOpt-LLM","DeepOR","StepORLM","SIRL","MURKA"] },
+      { t:{en:"Retrieval and memory of modeling knowledge", zh:"建模知识的检索与记忆"},
+        d:{en:"Supply constraint patterns, templates and linearization tricks from external corpora, or reuse self-accumulated experience and skills across tasks.", zh:"从外部语料中提供约束模式、模板与线性化技巧，或跨任务复用自我积累的经验与技能。"},
+        w:["DRoC","MIRROR","AlphaOPT","MM-Agent","OPTSKILLS"] }
+    ] },
+  { id: "code", name: {en:"Code construction", zh:"代码构建"},
+    chal: {en:"Solver-ready and data-consistent implementation", zh:"可求解且与数据一致的实现"},
+    short: {en:"model → solver code", zh:"模型 → 求解代码"},
+    why: {en:"A sound formulation can still fail through solver-specific syntax, API misuse, unsupported expressions, inconsistent data structures or wrong index mappings, whether the target is Gurobi, Pyomo, MiniZinc, OR-Tools, CPLEX or CVXPY.",
+          zh:"即使模型本身合理，实现时仍可能因求解器语法、API 误用、不支持的表达式、数据结构不一致或下标映射错误而失败，无论目标是 Gurobi、Pyomo、MiniZinc、OR-Tools、CPLEX 还是 CVXPY。"},
+    tech: [
+      { t:{en:"Output-format and solver-template prompting", zh:"输出格式与求解器模板提示"},
+        d:{en:"Make the target format explicit: code skeletons, solver-specific rules, output parsers, even grammar-constrained decoding.", zh:"把目标格式说清楚：代码骨架、求解器专用规则、输出解析器，乃至语法约束解码。"},
+        w:["Text2Zinc","Text2Model","DCP-Bench-Open","OptiMUS-0.3","CAFA","FALCON"] },
+      { t:{en:"Data-grounded code generation", zh:"以数据为依据的代码生成"},
+        d:{en:"Separate model logic from instance data and align the code with data schemas, so numbers are not hard-coded and indices map to the right entities.", zh:"把模型逻辑与实例数据分离，让代码与数据结构对齐，避免硬编码数值并保证下标映射到正确的实体。"},
+        w:["OR-LLM-Bench","ACMG","LEAN-LLM-OPT","ReLoop","AlphaOPT","ProOPF"] },
+      { t:{en:"Code-centric fine-tuning", zh:"面向代码的微调"},
+        d:{en:"Teach solver syntax and API conventions through instruction tuning on verified code, or post-training with solver-grounded rewards.", zh:"通过在已验证代码上的指令微调，或以求解器结果为奖励的后训练，让模型掌握求解器语法与 API 规范。"},
+        w:["OptiTrust","ORLM","OptiMind","LLaMoCo","AutoOR","SIRL","LLMOPT"] }
+    ] },
+  { id: "verify", name: {en:"Verification-guided refinement", zh:"验证驱动的精炼"},
+    chal: {en:"Error localization and iterative repair", zh:"错误定位与迭代修复"},
+    short: {en:"verify → localize → repair", zh:"验证 → 定位 → 修复"},
+    why: {en:"Verification is feedback, not only a final grade. The key is to localize where a failure comes from and decide how far to roll back: verify, localize, choose the repair target, revise, and verify again.",
+          zh:"验证是反馈，而不只是最后打分。关键在于定位失败从何而来，并决定回退多远：验证、定位、选择修复目标、修改，再验证。"},
+    tech: [
+      { t:{en:"Code-level errors → self-debugging", zh:"代码级错误 → 自我调试"},
+        d:{en:"Tracebacks, syntax and API errors localize the failure to the code; the LLM patches it with the error message and runs again.", zh:"报错栈、语法与 API 错误把失败定位到代码；LLM 根据报错修补并重新运行。"},
+        w:["OptiMUS","OptiMUS-0.3","Holy Grail 2.0","DRoC"] },
+      { t:{en:"Formulation-level errors → local or global revision", zh:"模型级错误 → 局部或全局修改"},
+        d:{en:"Infeasibility, unexpected objectives or failed behavioural tests point to the model. Revise the faulty components, or search for an alternative formulation when the abstraction itself is wrong.", zh:"不可行、异常目标值或未通过的行为测试指向模型本身。修改出错的部分；若抽象本身有误，则搜索新的建模方案。"},
+        w:["OptiChat","ReLoop","DeepOR","OptiVer","OptiTree","SolverLLM","EvoCoT","MATHMO"] },
+      { t:{en:"Interpretation-level errors → reinterpretation and clarification", zh:"理解级错误 → 重新理解与澄清"},
+        d:{en:"When a feasible model solves the wrong problem, route the failure back to problem understanding, or ask the user.", zh:"当可行的模型求解的是错误的问题时，把失败路由回问题理解阶段，或向用户提问。"},
+        w:["Chain-of-Experts (backward reflection)","OR-LLM-Agent","DRoC","TriVAL"] }
+    ] }
+];
+var REPAIRS = [{en:"code repair",zh:"代码修复"},{en:"formulation repair",zh:"模型修复"},{en:"interpretation repair",zh:"理解修复"}];
+
+/* ===================================================================== content: benchmarks (survey §4, Table 1, Fig. 8) */
+var CATS = [
+  {id:"CF", name:{en:"Controlled formulation",zh:"受控建模基准"}, d:{en:"Short, clean LP/MILP word problems that isolate the basic ability to recover a model from text.",zh:"简短、干净的 LP/MILP 应用题，用于单独考察从文本恢复模型的基本能力。"}},
+  {id:"ES", name:{en:"Executable and solver-grounded",zh:"可执行、以求解器为依据"}, d:{en:"Targets solver-facing artifacts such as Python solver code, MiniZinc models or .lp files, often with data attached.",zh:"目标是面向求解器的产物，如 Python 求解代码、MiniZinc 模型或 .lp 文件，常附带数据。"}},
+  {id:"RI", name:{en:"Realistic and industrial",zh:"贴近现实与工业"}, d:{en:"Longer business-style inputs with rules, external data, large variable families or models derived from real instances.",zh:"更长的业务式输入，包含规则、外部数据、大规模变量族，或源自真实实例的模型。"}},
+  {id:"DS", name:{en:"Domain-specific",zh:"特定领域"}, d:{en:"Built around a domain or paradigm with its own conventions: dynamic programming, routing, scheduling, power systems, QUBO and more.",zh:"围绕具有自身惯例的领域或范式构建：动态规划、路径、调度、电力系统、QUBO 等。"}}
+];
+// [name, category, year, size, task{en,zh}, source{en,zh}]
+var BENCH = [
+  ["NL4Opt","CF",2023,"1,101",{en:"LP word problems → optimization entities and logical-form declarations",zh:"LP 应用题 → 优化实体与逻辑形式声明"},{en:"Manually created and expert annotated",zh:"人工构建并由专家标注"}],
+  ["MILP synthesis set","CF",2023,"30",{en:"Unstructured MILP descriptions → complete formulations with logical and binary constraints",zh:"非结构化 MILP 描述 → 含逻辑与 0-1 约束的完整模型"},{en:"Manually constructed from LP-style problems",zh:"由 LP 类题目人工改造"}],
+  ["NLP4LP","CF",2024,"67",{en:"LP/MILP descriptions → formulations, solver code, tests and solutions",zh:"LP/MILP 描述 → 模型、求解代码、测试与解"},{en:"Mainly textbooks and lecture notes",zh:"主要来自教材与讲义"}],
+  ["ComplexOR","RI",2024,"37",{en:"Complex OR descriptions → formulations, solver code or feasible solutions",zh:"复杂运筹描述 → 模型、求解代码或可行解"},{en:"Literature and industrial cases",zh:"文献与工业案例"}],
+  ["IndustryOR","RI",2024,"100",{en:"Business narratives, tables and rules → formulations and solver-facing outputs",zh:"业务叙述、表格与规则 → 模型与面向求解器的输出"},{en:"Real-world industrial cases",zh:"真实工业案例"}],
+  ["LPWP","CF",2025,"287",{en:"LP descriptions → abstract models, YAML/DSL artifacts and solver-ready outputs",zh:"LP 描述 → 抽象模型、YAML/DSL 产物与可求解输出"},{en:"Reuses controlled LP word problems",zh:"复用受控 LP 应用题"}],
+  ["MAMO","ES",2025,"1,209",{en:"Mathematical modeling problems → Python solver code or .lp files",zh:"数学建模问题 → Python 求解代码或 .lp 文件"},{en:"Textbook and synthetic problems, expert reviewed",zh:"教材与合成题目，经专家审核"}],
+  ["OptiBench","ES",2025,"605",{en:"Human-readable problems → decisions, objectives and executable programs",zh:"可读的问题 → 决策、目标与可执行程序"},{en:"Textbooks, assignments and examinations",zh:"教材、作业与考试"}],
+  ["OptMATH-Bench","ES",2025,"245",{en:"Generated descriptions → formulations, LP/MPS files and code",zh:"生成的描述 → 模型、LP/MPS 文件与代码"},{en:"Back-translated from formal seed models",zh:"由形式化种子模型反向翻译"}],
+  ["Text2Zinc","ES",2025,"110",{en:"Descriptions and data files → MiniZinc models and solutions",zh:"描述与数据文件 → MiniZinc 模型与解"},{en:"Integrates NL4Opt, NLP4LP, ComplexOR, CSPLib and MiniZinc collections",zh:"整合 NL4Opt、NLP4LP、ComplexOR、CSPLib 与 MiniZinc 题集"}],
+  ["CPEVAL","ES",2025,"210",{en:"CP descriptions and parameters → MiniZinc or PyCSP3 models",zh:"约束规划描述与参数 → MiniZinc 或 PyCSP3 模型"},{en:"Derived from solvable CSPLib problems",zh:"源自可解的 CSPLib 问题"}],
+  ["DCP-Bench-Open","ES",2025,"164",{en:"Combinatorial problems → OR-Tools, CPMpy or MiniZinc models",zh:"组合问题 → OR-Tools、CPMpy 或 MiniZinc 模型"},{en:"CSPLib, ComplexOR and CPMpy examples",zh:"CSPLib、ComplexOR 与 CPMpy 示例"}],
+  ["LogiOR","RI",2025,"92",{en:"Logistics and supply-chain descriptions → standardized formulations",zh:"物流与供应链描述 → 标准化模型"},{en:"Expert-guided construction for logistics",zh:"在专家指导下为物流场景构建"}],
+  ["G-REAL","RI",2025,"900",{en:"Graph-centric descriptions → graph solutions or modeling artifacts",zh:"以图为中心的描述 → 图问题解或建模产物"},{en:"Synthetic graphs with fictional narratives",zh:"合成图配以虚构叙事"}],
+  ["Text2Model","ES",2026,"1,775",{en:"Structured specifications and instances → valid MiniZinc models",zh:"结构化规格与实例 → 有效的 MiniZinc 模型"},{en:"Enriches seven existing OR and CP datasets",zh:"扩充七个已有的运筹与约束规划数据集"}],
+  ["OR-LLM-Bench","ES",2026,"1,212",{en:"Synthetic OR descriptions → verifiable formulations, code and solutions",zh:"合成运筹描述 → 可验证的模型、代码与解"},{en:"Scalable verification pipeline",zh:"可扩展的验证流水线生成"}],
+  ["Large-Scale-OR / Air-NRM","RI",2026,"137",{en:"Descriptions with external files → large-scale solver-ready models",zh:"带外部文件的描述 → 大规模可求解模型"},{en:"Kaggle data, industry cases and an airline simulator",zh:"Kaggle 数据、行业案例与航空模拟器"}],
+  ["ORCOpt-Bench","RI",2026,"50",{en:"Operational descriptions, tables and rules → structured optimization artifacts",zh:"运营描述、表格与规则 → 结构化优化产物"},{en:"Real-world operational scenarios",zh:"真实运营场景"}],
+  ["OPT-ENGINE","RI",2026,"–",{en:"Procedurally generated tasks → LP/MIP formulations or solver artifacts",zh:"程序化生成的任务 → LP/MIP 模型或求解产物"},{en:"Generated with controllable size and complexity",zh:"规模与复杂度可控地生成"}],
+  ["RetailOpt-190","RI",2026,"190",{en:"Retail planning descriptions → formulations or solver-facing artifacts",zh:"零售规划描述 → 模型或面向求解器的产物"},{en:"Retail archetypes with numerical variants",zh:"零售原型及其数值变体"}],
+  ["MIPLIB-NL","RI",2026,"223",{en:"Specifications and compact data → models aligned with MIPLIB instances",zh:"规格与紧凑数据 → 与 MIPLIB 实例对齐的模型"},{en:"Reverse-generated from MIPLIB 2017",zh:"由 MIPLIB 2017 反向生成"}],
+  ["ConstraintBench","RI",2026,"200",{en:"Constrained optimization descriptions → decisions, formulations or solver artifacts",zh:"约束优化描述 → 决策、模型或求解产物"},{en:"Generated from domain seeds and solver verified",zh:"由领域种子生成并经求解器验证"}],
+  ["DP-Bench","DS",2026,"132",{en:"Dynamic-programming problems → recurrences, code or final answers",zh:"动态规划问题 → 递推式、代码或最终答案"},{en:"Selected and annotated textbook problems",zh:"精选并标注的教材题"}],
+  ["DRoC routing benchmark","DS",2026,"48",{en:"Vehicle-routing descriptions → formulations, solver code and feasible routes",zh:"车辆路径描述 → 模型、求解代码与可行路线"},{en:"Expert-crafted instances with practical constraints",zh:"专家设计、含实际约束的实例"}],
+  ["Job scheduling constraint benchmark","DS",2026,"102",{en:"Production-scheduling requirements → constraint specifications or scheduling code",zh:"生产调度需求 → 约束规格或调度代码"},{en:"Real production requirements and scheduling literature",zh:"真实生产需求与调度文献"}],
+  ["Workforce scheduling benchmark","DS",2026,"–",{en:"Workforce and roster descriptions → expert-verified MILP models",zh:"人员排班描述 → 专家验证的 MILP 模型"},{en:"Formulated and verified by domain experts",zh:"由领域专家建模并验证"}],
+  ["Stochastic optimization benchmark","DS",2026,"18",{en:"Stochastic descriptions with scenarios → executable Gurobi models",zh:"含情景的随机优化描述 → 可执行的 Gurobi 模型"},{en:"Adapted from stochastic-programming literature",zh:"改编自随机规划经典文献"}],
+  ["ProOPF-D / ProOPF-B","DS",2026,"12,000+ / 121",{en:"Power-system requirements → MATPOWER/MATLAB implementations",zh:"电力系统需求 → MATPOWER/MATLAB 实现"},{en:"MATPOWER, IEEE systems and academic cases",zh:"MATPOWER、IEEE 系统与学术案例"}],
+  ["LLM-QUBO benchmark","DS",2026,"–",{en:"MILP descriptions → hardware-ready QUBO matrices",zh:"MILP 描述 → 可上硬件的 QUBO 矩阵"},{en:"Derived from standard combinatorial benchmarks",zh:"源自标准组合优化基准"}],
+  ["Queueing-control MDP benchmark","DS",2026,"36",{en:"Queueing-control descriptions → structured MDP operator graphs",zh:"排队控制描述 → 结构化 MDP 算子图"},{en:"Expert-curated from OR literature",zh:"由专家从运筹文献中整理"}],
+  ["Configuration CSP benchmark","DS",2026,"50",{en:"CSP/COP descriptions → annotations and MiniZinc models",zh:"CSP/COP 描述 → 标注与 MiniZinc 模型"},{en:"Built with domain experts for configuration tasks",zh:"与领域专家合作为配置任务构建"}]
+];
+
+/* ===================================================================== content: metrics (survey §5) */
+var METRICS = {
+  out: {name:{en:"Outcome level: judge a specific artifact or solution",zh:"结果层：评判具体的产物或解"}, fams:[
+    {t:{en:"Structural fidelity",zh:"结构保真度"}, d:{en:"Does the formulation recover the reference components? Can penalise valid alternative formulations.",zh:"模型是否还原了参考模型的各个组成部分？可能误伤合法的等价模型。"}, ex:"precision / recall / F1 · token-level F1 · exact match"},
+    {t:{en:"Executability",zh:"可执行性"}, d:{en:"Can the artifact be parsed, compiled and run? Necessary but not sufficient.",zh:"产物能否被解析、编译并运行？必要但不充分。"}, ex:"execution rate · compilation accuracy"},
+    {t:{en:"Feasibility and constraint violation",zh:"可行性与约束违反"}, d:{en:"Do the returned decisions satisfy the original constraints, and by how much do they violate them?",zh:"返回的决策是否满足原始约束？违反的程度有多大？"}, ex:"feasibility rate · constraint violation"},
+    {t:{en:"Objective quality",zh:"目标质量"}, d:{en:"How good is a feasible solution relative to the optimum or a trusted reference?",zh:"可行解相对于最优值或可信参考有多好？"}, ex:"optimality gap · regret"}]},
+  sys: {name:{en:"System level: judge the whole pipeline",zh:"系统层：评判整条流程"}, fams:[
+    {t:{en:"Task success",zh:"任务成功"}, d:{en:"Does the system meet the benchmark-defined acceptance criterion?",zh:"系统是否满足基准定义的验收标准？"}, ex:"success rate · Pass@1 · Pass@k"},
+    {t:{en:"Efficiency and cost",zh:"效率与成本"}, d:{en:"What resources did the full pipeline consume?",zh:"整条流程消耗了多少资源？"}, ex:"runtime · tokens · API cost"}]}
+};
+var LADDER = [{en:"representation",zh:"表示"},{en:"executes",zh:"可执行"},{en:"feasible",zh:"可行"},{en:"objective quality",zh:"目标质量"},{en:"cost",zh:"成本"}];
+
+/* ===================================================================== content: agenda (survey §6) */
+var AGENDA = [
+  [{en:"Problem description",zh:"问题描述"},{en:"Interactive problem specification",zh:"交互式问题规格"},{en:"Ask when an unresolved issue could change the feasible region or the objective; propose minor conventions as explicit assumptions; weigh quality gained against user effort.",zh:"当未决问题可能改变可行域或目标时才提问；把次要惯例作为显式假设提出；权衡获得的质量与用户付出的精力。"}],
+  [{en:"Ground-truth-dependent checks",zh:"依赖标准答案的检查"},{en:"Independent semantic verification",zh:"独立的语义验证"},{en:"Gather evidence from independent sources, such as the specification, parameter perturbation and domain rules, and test whether verifiers detect and locate errors.",zh:"从规格对照、参数扰动、领域规则等独立来源收集证据，并检验验证器能否发现并定位错误。"}],
+  [{en:"Single formulations",zh:"单一模型"},{en:"Formulation portfolios",zh:"模型组合"},{en:"Offer a small set of meaningfully different correct formulations, with equivalence detection and ranking before every candidate is solved.",zh:"给出少量有实质差异的正确模型，并在全部求解之前完成等价识别与排序。"}],
+  [{en:"Formulation generation",zh:"只生成模型"},{en:"Formulation–solver co-design",zh:"模型与求解器协同设计"},{en:"Choose the representation and the solver together, and evaluate end to end, including solve time.",zh:"把建模表示与求解器作为联合选择，并进行包括求解时间在内的端到端评测。"}],
+  [{en:"Best-case accuracy",zh:"最好情况下的准确率"},{en:"Reliable and reviewable modeling",zh:"可靠、可审阅的建模"},{en:"Know when not to act autonomously; measure reliability over repeated runs and paraphrases; point human reviewers to the parts most likely to be wrong.",zh:"知道何时不应自主行动；在重复运行与改写表述下衡量可靠性；引导人工审阅最可能出错的部分。"}],
+  [{en:"A single out-of-distribution score",zh:"单一的分布外分数"},{en:"Defined generalization regimes",zh:"明确界定的泛化情形"},{en:"Report new numbers, new constraint combinations, new domains, frameworks and scales separately, to see where failures come from.",zh:"把新数值、新约束组合、新领域、新框架与新规模分别报告，以看清失败来自哪里。"}],
+  [{en:"Benchmark coverage",zh:"基准覆盖面"},{en:"Benchmark validity",zh:"基准有效性"},{en:"State the capability each instance tests, document provenance and checks, record expert disagreement, and report results by difficulty type.",zh:"说明每个实例考察的能力，记录来源与校验过程，保留专家分歧，并按难度类型报告结果。"}],
+  [{en:"Raw accuracy",zh:"单纯的准确率"},{en:"Quality–cost trade-offs",zh:"质量与成本的权衡"},{en:"Compare at similar budgets, report cost per verified formulation, and spend extra computation only where it is likely to help.",zh:"在相近预算下比较，报告每个通过验证的模型的成本，只在可能有帮助时投入额外计算。"}]
+];
+
+/* ===================================================================== content: survey */
+var CONTRIB = [
+  [{en:"A unified, stage-wise framework",zh:"统一的分阶段框架"},{en:"Problem interpretation, formulation generation, code construction and verification-guided refinement, each with its challenges, techniques and verification feedback.",zh:"问题理解、模型生成、代码构建与验证驱动的精炼，并梳理每一阶段的挑战、技术与验证反馈。"}],
+  [{en:"A taxonomy of benchmarks",zh:"基准分类体系"},{en:"The benchmark landscape traced over time and compared by input, target artifact, domain, construction, scale and verification, with an open dataset repository.",zh:"梳理基准的时间演进，从输入、目标产物、领域、构建方式、规模与验证机制进行比较，并维护开源数据集仓库。"}],
+  [{en:"A two-level taxonomy of metrics",zh:"两层评测指标体系"},{en:"Outcome-level and system-level metric families, with practical guidelines for choosing criteria.",zh:"结果层与系统层指标族，以及选择评测标准的实用指南。"}],
+  [{en:"A research agenda",zh:"研究议程"},{en:"Limitations synthesised across methods, data and evaluation, turned into directions for reliable, generalizable, verifiable and deployable systems.",zh:"综合方法、数据与评测上的局限，提出面向可靠、可泛化、可验证、可部署系统的研究方向。"}]
+];
+var FUNNEL = [["736",{en:"records found",zh:"条检索记录"}],["510",{en:"after de-duplication",zh:"条去重后"}],["212",{en:"after screening",zh:"篇初筛保留"}],["81",{en:"full-text eligible",zh:"篇全文符合"}],["94",{en:"primary studies, incl. 13 by snowballing",zh:"篇核心文献（含滚雪球补充 13 篇）"}]];
+
+var GSTEPS = [
+  [{en:"solver",zh:"求解器"}, {en:"INFEASIBLE: the minimum production of 50 exceeds what the budget allows (42)",zh:"INFEASIBLE：最低产量 50 超过预算允许的 42"}, {en:"relax the production floor, or check whether the budget is in thousands",zh:"放宽产量下限，或确认预算单位是否为千"}],
+  [{en:"behavioural test",zh:"行为测试"}, {en:"raising demand by 10 % leaves the solution unchanged",zh:"需求提高 10%，解却没有变化"}, {en:"the demand row is not binding; coverage was written with the wrong index",zh:"需求约束没有起作用；覆盖约束的下标写错了"}],
+  [{en:"reflection",zh:"反思"}, {en:"edits keep failing on the same subtour structure",zh:"反复修改都卡在同一个子回路结构上"}, {en:"switch from an edge-based to a position-based model",zh:"从基于边的模型改为基于位置的模型"}]
+];
+
+/* ===================================================================== render: static text */
+function applyText() {
+  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  document.querySelectorAll("[data-k]").forEach(function (el) {
+    var k = el.getAttribute("data-k");
+    if (!(k in EN)) EN[k] = el.innerHTML;
+    el.innerHTML = T(k);
+  });
+  var lb = document.getElementById("lang");
+  lb.textContent = lang === "zh" ? "EN" : "中文";
+  lb.setAttribute("aria-label", lang === "zh" ? "Switch to English" : "切换到中文");
+  document.title = lang === "zh" ? "LLM 自动建模 · 从自然语言到优化模型" : "LLM Autoformulation · From natural language to optimization models";
+  renderNL(); renderPipeline(); renderSearch(); renderBench(); renderMetrics(); renderAgenda(); renderSurvey();
+  if (!running) document.getElementById("pause").textContent = T("lg.resume");
+  if (played) playNL(true);
+}
+
+/* --- words to model */
+var timers = [], played = false;
+function renderNL() {
+  document.getElementById("nl").innerHTML = BAKERY[lang].map(function (p) { return p[1] ? '<mark class="' + p[1] + '">' + esc(p[0]) + "</mark>" : esc(p[0]); }).join("");
+  document.getElementById("model").innerHTML = MODEL.map(function (m) { return '<div class="r" data-k2="' + m[0] + '"><small>' + esc(L(m[1])) + "</small>" + tex(m[2]) + "</div>"; }).join("");
+}
+function playNL(instant) {
+  timers.forEach(clearTimeout); timers = [];
+  var marks = [].slice.call(document.querySelectorAll("#nl mark")), rows = [].slice.call(document.querySelectorAll("#model .r"));
+  marks.concat(rows).forEach(function (e) { e.classList.remove("on"); });
+  var t = 0, gap = instant || reduced() ? 0 : 420;
+  ["v", "o", "c"].forEach(function (k) {
+    marks.filter(function (m) { return m.classList.contains(k); }).forEach(function (m) { timers.push(setTimeout(function () { m.classList.add("on"); }, t)); t += gap; });
+    rows.filter(function (r) { return r.getAttribute("data-k2") === k; }).forEach(function (r) { timers.push(setTimeout(function () { r.classList.add("on"); }, t)); t += gap; });
+  });
+  played = true;
+  document.getElementById("play").textContent = T("what.replay");
+}
+
+/* --- pipeline */
+var stageSel = 0;
+function exampleFor(i) {
+  var zh = lang === "zh";
+  if (i === 0) {
+    var F = zh ? [["问题","人员排班"],["实体","工人、班次"],["集合","W 工人，S 班次，N 夜班"],["数据","需求、可用性、上限、成本"],["决策","把工人分配到班次"],["目标","成本最小，夜班优先"],["规则","满足需求、尊重可用性、不超上限"]]
+               : [["Problem","workforce scheduling"],["Entities","workers, shifts"],["Sets","W workers, S shifts, N night shifts"],["Data","demand, availability, capacity, cost"],["Decision","assign worker to shift"],["Goal","minimize cost, prioritize nights"],["Rules","meet demand, respect availability, limit capacity"]];
+    return '<div class="lab">' + (zh ? "原始文本" : "Raw problem text") + '</div><p style="font-family:var(--serif);margin:0 0 .9rem">' + esc(L(RAW)) + '</p><div class="lab">' + (zh ? "结构化理解" : "Structured understanding") + '</div><dl class="fields">' +
+      F.map(function (f) { return "<dt>" + esc(f[0]) + "</dt><dd>" + esc(f[1]) + "</dd>"; }).join("") +
+      "<dt>" + (zh ? "待定字段" : "Open fields") + '</dt><dd class="open">' + (zh ? "需求数值？夜班优先如何量化？" : "demand values? priority rule?") + "</dd></dl>";
+  }
+  if (i === 1) {
+    var R = [[zh ? "变量" : "variables", "x_{w,s}\\in\\{0,1\\},\\quad u_s\\ge 0"], [zh ? "目标" : "objective", "\\min\\ \\textstyle\\sum c_w x_{w,s}+\\text{night penalty}"],
+             [zh ? "覆盖" : "coverage", "\\textstyle\\sum_w x_{w,s}+u_s\\ge d_s"], [zh ? "可用性" : "availability", "x_{w,s}\\le a_{w,s}"], [zh ? "上限" : "capacity", "\\textstyle\\sum_s x_{w,s}\\le \\mathrm{cap}_w"]];
+    return '<div class="lab">' + (zh ? "生成的数学模型" : "Generated formulation") + '</div><div class="ex-rows">' + R.map(function (r) { return '<div class="r"><span class="xs muted" style="display:inline-block;min-width:6rem">' + esc(r[0]) + "</span>" + tex(r[1]) + "</div>"; }).join("") + "</div>";
+  }
+  if (i === 2) {
+    var c = ['<span class="cm"># load data</span>', "W, S, d, a, cap, c = load(data)", '<span class="cm"># define variables</span>', "x = m.addVars(W, S, vtype=GRB.BINARY)", "u = m.addVars(S, lb=0)", '<span class="cm"># objective</span>',
+             "m.setObjective(cost(x) + night_penalty(u), GRB.MINIMIZE)", '<span class="cm"># constraints</span>', 'm.addConstrs(x.sum("*", s) + u[s] >= d[s] for s in S)', "m.addConstrs(x[w, s] <= a[w, s] for w in W for s in S)",
+             'm.addConstrs(x.sum(w, "*") <= cap[w] for w in W)', "m.optimize()"];
+    return '<div class="lab">' + (zh ? "求解代码（Gurobi）" : "Solver code (Gurobi)") + '</div><pre class="ex-code">' + c.join("\n") + "</pre>";
+  }
+  var s = zh ? ["报错栈","KeyError","不可行","测试未通过","目标值错误"] : ["traceback","KeyError","infeasible","failed test","wrong objective"];
+  var o = zh ? ["接受","修复","重新生成"] : ["accepted","repaired","regenerated"];
+  var rt = zh ? [["运行时报错","→ 代码修复"],["求解状态不可行","→ 模型修复"],["可行但违背本意","→ 理解修复"]] : [["runtime traceback","→ code repair"],["infeasible status","→ formulation repair"],["feasible but violates intent","→ interpretation repair"]];
+  return '<div class="sig"><div><div class="lab">' + (zh ? "验证信号" : "Verification signals") + "</div><ul>" + s.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + '</ul></div><div><div class="lab">' + (zh ? "结果" : "Outcomes") + "</div><ul>" + o.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div></div>" +
+    '<div class="route">' + rt.map(function (r) { return "<div><span>" + esc(r[0]) + "</span><b>" + esc(r[1]) + "</b></div>"; }).join("") + "</div>";
+}
+function renderPipeline() {
+  var zh = lang === "zh";
+  var row = '<div class="pnode end"><span class="k">' + (zh ? "输入" : "Input") + '</span><span class="t">' + (zh ? "原始问题文本" : "Raw problem text") + '</span><span class="c">' + (zh ? "叙述、规则、表格" : "narratives, rules, tables") + "</span></div>";
+  STAGES.forEach(function (s, i) {
+    row += '<button type="button" class="pnode" data-i="' + i + '" aria-pressed="' + (i === stageSel) + '"><span class="k">' + (zh ? "阶段 " : "Stage ") + (i + 1) + '</span><span class="t">' + esc(L(s.name)) + '</span><span class="c">' + esc(L(s.short)) + "</span></button>";
+  });
+  row += '<div class="pnode end"><span class="k">' + (zh ? "输出" : "Output") + '</span><span class="t">' + (zh ? "可执行产物" : "Executable artifact") + '</span><span class="c">' + (zh ? "求解代码、经检验的解、经验证的模型" : "solver code, checked solution, verified model") + "</span></div>";
+  var pr = document.getElementById("pipe-row");
+  pr.innerHTML = row;
+  pr.querySelectorAll("button").forEach(function (b) { b.onclick = function () { stageSel = +b.getAttribute("data-i"); renderPipeline(); }; });
+  // repair arcs from stage 4 back to stages 3, 2, 1 (column centres on a 1000-wide canvas)
+  var cx = [76, 239, 413, 587, 761, 924], svg = "";
+  [[3, 0], [2, 1], [1, 2]].forEach(function (p, k) {
+    var x1 = cx[4] - 10 - k * 16, x2 = cx[p[0]] + 6, y = 72, h = 16 + k * 22;
+    svg += '<path d="M' + x1 + "," + y + " C" + x1 + "," + (y - h) + " " + x2 + "," + (y - h) + " " + x2 + "," + y + '"/>' +
+           '<text x="' + ((x1 + x2) / 2) + '" y="' + (y - h * .75 - 4) + '" text-anchor="middle">' + esc(L(REPAIRS[p[1]])) + "</text>";
+  });
+  document.getElementById("repairs").innerHTML = svg;
+  var s = STAGES[stageSel];
+  document.getElementById("stage-panel").innerHTML =
+    "<div><div class=\"xs muted\">" + (zh ? "阶段 " : "Stage ") + (stageSel + 1) + " · " + (zh ? "核心挑战" : "core challenge") + "</div><h3>" + esc(L(s.name)) + '</h3><div class="chal">' + esc(L(s.chal)) + '</div><p class="why">' + esc(L(s.why)) + '</p><div class="example">' + exampleFor(stageSel) + "</div></div>" +
+    "<div><div class=\"xs muted\" style=\"margin-bottom:.6rem\">" + (zh ? "技术与代表性工作" : "Techniques and representative work") + "</div>" + s.tech.map(function (x) {
+      return '<div class="tech"><h4>' + esc(L(x.t)) + "</h4><p>" + esc(L(x.d)) + '</p><div class="works">' + x.w.map(function (w) { return "<span>" + esc(w) + "</span>"; }).join("") + "</div></div>";
+    }).join("") + "</div>";
+}
+
+/* --- search figures */
+function renderSearch() {
+  var s = 7; function r() { s = (s * 16807) % 2147483647; return s / 2147483647; }
+  var dots = [], cl = [[120,260,"bad"],[190,110,"mix"],[330,230,"mix"],[450,120,"ok"],[470,300,"bad"]];
+  cl.forEach(function (c) { for (var i = 0; i < 26; i++) { var a = r() * 6.283, d = Math.sqrt(r()) * 52, k;
+    k = c[2] === "mix" ? (r() < .45 ? "bad" : "o") : c[2] === "ok" ? (r() < .55 ? "ok" : "o") : (r() < .7 ? "bad" : "o");
+    dots.push([c[0] + Math.cos(a) * d, c[1] + Math.sin(a) * d * .8, k]); } });
+  var col = {ok:"var(--ok)", bad:"var(--bad)", o:"var(--faint)"};
+  var path = [[70,320],[140,250],[200,150],[300,200],[380,150],[445,118]];
+  var g = lang === "zh" ? ["单位","整数性","加时间下标","收紧 M","换一种建模"] : ["units","integrality","add time index","tighten M","remodel"];
+  var svg = '<svg viewBox="0 0 560 360" width="100%" role="img" aria-label="Symbolic space with a search trajectory">' +
+    '<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--grad)"/></marker></defs>' +
+    [[90,60],[60,38],[30,18]].map(function (e) { return '<ellipse cx="450" cy="120" rx="' + e[0] + '" ry="' + e[1] + '" fill="none" stroke="var(--line)" stroke-dasharray="2 4"/>'; }).join("") +
+    dots.map(function (d) { return '<circle cx="' + d[0].toFixed(1) + '" cy="' + d[1].toFixed(1) + '" r="3.2" fill="' + col[d[2]] + '" opacity="' + (d[2] === "o" ? .5 : .85) + '"/>'; }).join("") +
+    path.slice(1).map(function (p, i) { var q = path[i]; return '<line x1="' + q[0] + '" y1="' + q[1] + '" x2="' + p[0] + '" y2="' + p[1] + '" stroke="var(--grad)" stroke-width="2" marker-end="url(#ar)"/>' +
+      '<text x="' + ((q[0] + p[0]) / 2 + 6) + '" y="' + ((q[1] + p[1]) / 2 - 6) + '" fill="var(--grad)" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="12">∇ ' + esc(g[i]) + "</text>"; }).join("") +
+    '<circle cx="70" cy="320" r="6" fill="var(--chalk)"/><text x="82" y="342" fill="var(--muted)" font-size="11">' + (lang === "zh" ? "初稿" : "first draft") + "</text>" +
+    '<circle cx="445" cy="118" r="8" fill="none" stroke="var(--ok)" stroke-width="2.5"/>' +
+    '<text x="196" y="72" fill="var(--muted)" font-size="11">' + (lang === "zh" ? "基于边" : "edge-based") + '</text><text x="300" y="302" fill="var(--muted)" font-size="11">' + (lang === "zh" ? "基于位置" : "position-based") + "</text></svg>";
+  document.getElementById("space").innerHTML = svg;
+  document.getElementById("eq-num").innerHTML = tex("\\theta_{t+1}=\\theta_t-\\eta\\,\\nabla_{\\theta}\\mathcal{L}(\\theta_t)", true);
+  document.getElementById("eq-verb").innerHTML = tex("g_t=\\mathrm{Critique}(\\mathcal{M}_t,\\ \\mathrm{solve}(\\mathcal{M}_t))", true) + tex("\\mathcal{M}_{t+1}=\\mathrm{LLM}(\\mathcal{M}_t,\\ g_t)", true);
+  document.getElementById("gsteps").innerHTML = GSTEPS.map(function (s) { return '<div class="gstep"><div class="from">' + esc(L(s[0])) + "</div><div>" + esc(L(s[1])) + '</div><div class="g">∇ ' + esc(L(s[2])) + "</div></div>"; }).join("");
+}
+
+/* --- benchmarks */
+var catSel = "", bmSel = "IndustryOR";
+function renderBench() {
+  var zh = lang === "zh";
+  var cnt = {}; BENCH.forEach(function (b) { cnt[b[1]] = (cnt[b[1]] || 0) + 1; });
+  var cats = document.getElementById("cats");
+  cats.innerHTML = CATS.map(function (c) { return '<button type="button" class="cat ' + c.id + '" data-c="' + c.id + '" aria-pressed="' + (catSel === c.id) + '"><span class="cnt">' + cnt[c.id] + '</span><span class="tag">' + c.id + "</span><h4>" + esc(L(c.name)) + "</h4><p>" + esc(L(c.d)) + "</p></button>"; }).join("");
+  cats.querySelectorAll("button").forEach(function (b) { b.onclick = function () { var c = b.getAttribute("data-c"); catSel = catSel === c ? "" : c; renderBench(); }; });
+  var years = [2023, 2024, 2025, 2026], cum = 0;
+  document.getElementById("timeline").innerHTML = years.map(function (y) {
+    var items = BENCH.filter(function (b) { return b[2] === y; });
+    cum += items.length;
+    return '<div class="yrcol' + (items.length > 10 ? " big" : "") + '">' + items.map(function (b) {
+      return '<button type="button" class="bm ' + b[1] + (catSel && catSel !== b[1] ? " dim" : "") + '" data-n="' + esc(b[0]) + '" aria-pressed="' + (bmSel === b[0]) + '">' + esc(b[0]) + "</button>";
+    }).join("") + '<div class="foot"><b>' + y + "</b><span>" + (zh ? "累计 " + cum + " 个" : cum + " in total") + "</span></div></div>";
+  }).join("");
+  document.querySelectorAll("#timeline .bm").forEach(function (b) { b.onclick = function () { bmSel = b.getAttribute("data-n"); renderBench(); }; });
+  var b = BENCH.filter(function (x) { return x[0] === bmSel; })[0];
+  var c = CATS.filter(function (x) { return x.id === b[1]; })[0];
+  document.getElementById("bm-detail").innerHTML = "<dt>" + (zh ? "基准" : "Benchmark") + '</dt><dd><span class="dsn">' + esc(b[0]) + "</span> · " + b[2] + "</dd><dt>" + (zh ? "类别" : "Category") + '</dt><dd class="' + b[1] + '"><span class="tag" style="font-family:var(--mono);font-size:.72rem;border-radius:3px;padding:.05rem .35rem;margin-right:.4rem">' + b[1] + "</span>" + esc(L(c.name)) + "</dd><dt>" + (zh ? "任务与目标产物" : "Task and target artifact") + "</dt><dd>" + esc(L(b[4])) + "</dd><dt>" + (zh ? "构建方式与来源" : "Construction and source") + "</dt><dd>" + esc(L(b[5])) + "</dd><dt>" + (zh ? "规模" : "Size") + "</dt><dd>" + esc(b[3]) + "</dd>";
+}
+
+/* --- metrics */
+function renderMetrics() {
+  function lvl(key, cls) { var m = METRICS[key]; return '<div class="level ' + cls + '"><h4>' + esc(L(m.name)) + '</h4><div class="mfam">' + m.fams.map(function (f) { return '<div class="mf"><h5>' + esc(L(f.t)) + "</h5><p>" + esc(L(f.d)) + '</p><div class="ex">' + esc(f.ex) + "</div></div>"; }).join("") + "</div></div>"; }
+  document.getElementById("levels").innerHTML = lvl("out", "out") + lvl("sys", "sys");
+  document.getElementById("ladder").innerHTML = LADDER.map(function (x) { return "<span>" + esc(L(x)) + "</span>"; }).join("<i>→</i>");
+}
+
+/* --- agenda */
+function renderAgenda() {
+  document.getElementById("agenda-list").innerHTML = AGENDA.map(function (a, i) {
+    return '<div><div class="ft"><span class="num">6.' + (i + 1) + '</span><span class="from">' + esc(L(a[0])) + '</span><span class="arrow">→</span><span class="to">' + esc(L(a[1])) + "</span></div><p>" + esc(L(a[2])) + "</p></div>";
+  }).join("");
+}
+
+/* --- survey */
+function renderSurvey() {
+  document.getElementById("contrib").innerHTML = CONTRIB.map(function (c, i) { return '<div><span class="n">' + (i + 1) + "</span><div><h4>" + esc(L(c[0])) + "</h4><p>" + esc(L(c[1])) + "</p></div></div>"; }).join("");
+  document.getElementById("funnel").innerHTML = FUNNEL.map(function (f) { return "<span><b>" + f[0] + "</b> " + esc(L(f[1])) + "</span>"; }).join("<i>→</i>");
+}
+document.getElementById("copybib").onclick = function () {
+  var txt = document.getElementById("bibtex").textContent;
+  function done() { toast(T("sv.copied")); }
+  function fallback() { var r = document.createRange(); r.selectNodeContents(document.getElementById("bibtex")); var s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, fallback); else fallback();
+};
+function toast(m) { var t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = m; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2500); }
+
+/* ===================================================================== hero tree */
+function reduced() { return window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches; }
+var FR = [
+  ["max Σⱼ pⱼxⱼ","start from a profit objective","从利润目标出发"],["min Σᵢⱼ cᵢⱼxᵢⱼ","the story is about cost → minimise","故事讲的是成本 → 最小化"],
+  ["Σⱼ aᵢⱼxⱼ ≤ bᵢ","resources are limited → capacity rows","资源有限 → 产能约束"],["xⱼ ∈ ℤ₊","trucks cannot be fractional → integer","卡车不能是小数 → 整数"],
+  ["y ∈ {0,1}","a fixed charge is mentioned → binary switch","提到固定费用 → 0-1 开关"],["xⱼ ≤ M·yⱼ","link production to the switch","把产量与开关联系起来"],
+  ["M = 120","big-M 10⁴ is loose → tighten","big-M 10⁴ 太松 → 收紧"],["Iₜ = Iₜ₋₁ + xₜ − dₜ","demand varies by week → time index","需求按周变化 → 加时间下标"],
+  ["Σᵢ xᵢⱼ ≥ dⱼ","every customer must be served","每个客户都要被满足"],["Σⱼ xᵢⱼ = sᵢ","all supply must ship","供应必须全部运出"],
+  ["uᵢ − uⱼ + n·xᵢⱼ ≤ n−1","subtours appear → MTZ cuts","出现子回路 → MTZ 约束"],["x₁ ≥ 0.2·Σ x","'at least 20 %' → ratio row","“至少 20%” → 比例约束"],
+  ["drop row 7","row 7 is implied by row 3","第 7 行可由第 3 行推出"],["obj off by 4.2 %","5220 vs 5450 → re-read units","5220 vs 5450 → 重读单位"],
+  ["INFEASIBLE","minimum order conflicts with budget","最低订量与预算冲突"],["Σₖ yₖ ≤ 1","choose at most one site","最多选一个地点"],["x ∈ ℝ₊","amounts in kg → continuous","单位是 kg → 连续变量"]
+];
+var canvas = document.getElementById("tree"), ctx = canvas.getContext("2d"), tipEl = document.getElementById("tip");
+var W = 0, H = 0, nodes = [], edges = [], nid = 0, running = !reduced(), lastGrow = 0, hover = null, found = null, fade = 0, C = pal();
+function pal() { var s = getComputedStyle(document.documentElement), v = function (n) { return s.getPropertyValue(n).trim(); };
+  return {ink:v("--ink"), line:v("--line"), chalk:v("--chalk"), ok:v("--ok"), grad:v("--grad"), bad:v("--bad")}; }
+function resize() { var r = canvas.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2); W = r.width; H = r.height; canvas.width = W * d; canvas.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0); layout(true); }
+function kids(n) { return nodes.filter(function (c) { return c.p === n.id; }); }
+function reset() { nodes = []; edges = []; nid = 0; found = null; fade = 0;
+  nodes.push({id:nid++, p:null, dep:0, label:lang === "zh" ? "自然语言问题" : "natural-language problem", g:null, st:"root", x:40, y:H / 2, tx:40, ty:H / 2, a:0}); layout(true); }
+function layout(snap) {
+  if (!nodes.length) return;
+  var md = Math.max(4, Math.max.apply(null, nodes.map(function (n) { return n.dep; }))), left = W < 600 ? 120 : 175, cw = (W - left - 80) / md;
+  function lv(n) { var k = kids(n); return k.length ? k.reduce(function (a, c) { return a + lv(c); }, 0) : 1; }
+  var tot = lv(nodes[0]), top = 50, span = Math.min(H - 120, Math.max(tot, 6) * 46);
+  (function place(n, y0, y1) { n.tx = left + n.dep * cw; n.ty = (y0 + y1) / 2; var acc = y0, L0 = lv(n); kids(n).forEach(function (c) { var sp = lv(c) / L0 * (y1 - y0); place(c, acc, acc + sp); acc += sp; }); })(nodes[0], top, top + span);
+  var ys = nodes.map(function (n) { return n.ty; }), off = (H - (Math.max.apply(null, ys) + Math.min.apply(null, ys))) / 2;
+  nodes.forEach(function (n) { n.ty += off; if (snap) { n.x = n.tx; n.y = n.ty; } });
+}
+function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+function grow(now) {
+  var open = nodes.filter(function (n) { return n.st !== "bad" && n.st !== "pruned" && n.dep < 5 && kids(n).length < 3; });
+  if (!open.length || nodes.length > 30) { finish(); return; }
+  var par = Math.random() < .65 ? open[open.length - 1 - Math.floor(Math.random() * Math.min(3, open.length))] : pick(open);
+  var k = par.dep === 0 ? 3 : 1 + Math.floor(Math.random() * 2);
+  for (var i = 0; i < k; i++) { var f = pick(FR), r = Math.random(), st = par.dep >= 3 && r < .22 ? "bad" : r < .12 ? "pruned" : "open";
+    var n = {id:nid++, p:par.id, dep:par.dep + 1, label:f[0], g:lang === "zh" ? f[2] : f[1], st:st, x:par.x, y:par.y, tx:par.x, ty:par.y, a:0};
+    nodes.push(n); edges.push({f:par.id, t:n.id, born:now}); }
+  layout(false);
+}
+function finish() { if (found) return; var c = nodes.filter(function (n) { return n.st === "open" && n.dep >= 3; }), b = c.length ? c[c.length - 1] : nodes[nodes.length - 1];
+  b.st = "ok"; var ids = {}, cur = b; while (cur) { ids[cur.id] = 1; cur = cur.p === null ? null : nodes[cur.p]; } found = {ids:ids, born:performance.now()}; }
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function draw(now) {
+  ctx.clearRect(0, 0, W, H);
+  nodes.forEach(function (n) { n.x += (n.tx - n.x) * .12; n.y += (n.ty - n.y) * .12; n.a = Math.min(1, n.a + .05); });
+  var GA = fade ? Math.max(0, 1 - (now - fade) / 900) : 1;
+  edges.forEach(function (e) { var a = nodes[e.f], b = nodes[e.t], age = (now - e.born) / 1000, on = found && found.ids[a.id] && found.ids[b.id];
+    ctx.save(); ctx.globalAlpha = GA * (b.st === "pruned" ? .3 : 1) * b.a; ctx.strokeStyle = on ? C.ok : age < 2.2 ? C.grad : C.line; ctx.lineWidth = on ? 2.2 : 1.2;
+    ctx.setLineDash(age < 2.2 && !on ? [4, 4] : []); var mx = (a.x + b.x) / 2; ctx.beginPath(); ctx.moveTo(a.x + 6, a.y); ctx.bezierCurveTo(mx, a.y, mx, b.y, b.x - 6, b.y); ctx.stroke();
+    if (age < 3 && b.g && running) { ctx.setLineDash([]); ctx.globalAlpha = GA * Math.max(0, Math.min(1, (3 - age) / 1.2)); ctx.fillStyle = C.grad; ctx.font = "italic 12px Newsreader, Georgia, serif";
+      var tx = "∇ " + b.g, tw = ctx.measureText(tx).width; ctx.fillText(tx, Math.min(Math.max(mx - tw / 2, 8), W - tw - 8), (a.y + b.y) / 2 - 10); }
+    ctx.restore(); });
+  nodes.forEach(function (n) { ctx.save(); ctx.globalAlpha = GA * n.a * (n.st === "pruned" ? .35 : 1); var root = n.st === "root";
+    ctx.font = root ? "500 13px 'IBM Plex Sans', system-ui, sans-serif" : "13px Newsreader, Georgia, serif";
+    var w = ctx.measureText(n.label).width + 18, h = 26, x = n.x - (root ? w - 8 : w / 2), y = n.y - h / 2;
+    ctx.fillStyle = C.ink; rr(x, y, w, h, 5); ctx.fill();
+    ctx.strokeStyle = hover === n ? C.grad : n.st === "ok" ? C.ok : n.st === "bad" ? C.bad : root ? C.chalk : C.line; ctx.lineWidth = n.st === "ok" || root || hover === n ? 1.8 : 1.1; ctx.stroke();
+    ctx.fillStyle = n.st === "bad" ? C.bad : n.st === "ok" ? C.ok : C.chalk; ctx.fillText(n.label, x + 9, n.y + 4.5);
+    if (n.st === "ok" && found) { var p = ((now - found.born) / 1000) % 1.6; ctx.globalAlpha = GA * Math.max(0, 1 - p / 1.6) * .8; ctx.strokeStyle = C.ok; rr(x - p * 8, y - p * 8, w + p * 16, h + p * 16, 8); ctx.stroke(); }
+    n.box = [x, y, w, h]; ctx.restore(); });
+}
+function tick(now) {
+  if (running) { if (!found && now - lastGrow > 1150) { grow(now); lastGrow = now; }
+    if (found && now - found.born > 4200 && !fade) fade = now; if (fade && now - fade > 950) { reset(); lastGrow = now; } }
+  draw(now); requestAnimationFrame(tick);
+}
+function staticTree() { reset(); var t0 = performance.now() - 1e4; for (var i = 0; i < 9; i++) grow(t0); finish(); nodes.forEach(function (n) { n.a = 1; n.x = n.tx; n.y = n.ty; }); }
+canvas.addEventListener("mousemove", function (e) { var r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  hover = nodes.filter(function (n) { return n.box && mx >= n.box[0] && mx <= n.box[0] + n.box[2] && my >= n.box[1] && my <= n.box[1] + n.box[3]; })[0] || null;
+  if (hover) { tipEl.innerHTML = '<div style="font-family:var(--serif);font-size:1.05rem">' + esc(hover.label) + "</div>" + (hover.g ? '<div style="color:var(--grad);font-style:italic;margin-top:.3rem">∇ ' + esc(hover.g) + "</div>" : "");
+    tipEl.hidden = false; tipEl.style.left = Math.min(mx + 16, r.width - 350) + "px"; tipEl.style.top = my + 16 + "px"; } else tipEl.hidden = true; });
+canvas.addEventListener("mouseleave", function () { hover = null; tipEl.hidden = true; });
+document.getElementById("pause").onclick = function () { running = !running; this.textContent = T(running ? "lg.pause" : "lg.resume"); if (running) EN["lg.pause"] = EN["lg.pause"]; };
+new ResizeObserver(resize).observe(canvas);
+
+/* ===================================================================== wiring */
+document.getElementById("play").onclick = function () { playNL(false); };
+document.getElementById("lang").onclick = function () { lang = lang === "zh" ? "en" : "zh"; try { localStorage.setItem("af.lang", lang); } catch (e) {} applyText(); reset(); if (!running) staticTree(); };
+document.getElementById("theme").onclick = function () { var t = document.documentElement.dataset.theme === "light" ? "dark" : "light"; document.documentElement.dataset.theme = t; try { localStorage.setItem("af.theme", t); } catch (e) {} C = pal(); };
+var io = new IntersectionObserver(function (es) { if (es.some(function (e) { return e.isIntersecting; }) && !played) { playNL(false); } }, {threshold: .5});
+io.observe(document.getElementById("nl"));
+var secs = ["what","pipeline","search","benchmarks","evaluation","agenda","survey"].map(function (id) { return document.getElementById(id); });
+var navIO = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) document.querySelectorAll(".links a").forEach(function (a) { a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id); }); }); }, {rootMargin: "-45% 0px -50% 0px"});
+secs.forEach(function (s) { navIO.observe(s); });
+
+function start() { applyText(); resize(); if (running) reset(); else staticTree(); requestAnimationFrame(tick); }
+if (document.readyState === "complete") start(); else window.addEventListener("load", start);
+})();
+</script>
+</body>
+</html>
